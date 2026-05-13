@@ -172,6 +172,7 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2024-03-01",
       "name": "defenderPlans-deploy",
+      "location": "[parameters('location')]",
       "properties": {
         "mode": "Incremental",
         "expressionEvaluationOptions": { "scope": "inner" },

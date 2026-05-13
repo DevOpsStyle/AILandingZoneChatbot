@@ -6,13 +6,13 @@ Template ARM **nested** (subscription-scope) che esegue il deploy end-to-end di 
 
 Repo: [`DevOpsStyle/AILandingZoneChatbot`](https://github.com/DevOpsStyle/AILandingZoneChatbot) — branch `main`.
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Farm%2Fmain.json/uiFormDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Farm%2FcreateUiDefinition.json)
-[![Deploy to Azure US Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Farm%2Fmain.json/uiFormDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Farm%2FcreateUiDefinition.json)
-[![Visualize](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true)](https://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Farm%2Fmain.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Fmain.json/uiFormDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2FcreateUiDefinition.json)
+[![Deploy to Azure US Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Fmain.json/uiFormDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2FcreateUiDefinition.json)
+[![Visualize](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true)](https://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Fmain.json)
 
 > Se usi un branch diverso da `main`, sostituisci `main` nei 3 URL sopra con il nome del branch (URL-encoded).
 
-Il portale aprirà il **wizard** definito da [arm/createUiDefinition.json](createUiDefinition.json) con questi step:
+Il portale aprirà il **wizard** definito da [createUiDefinition.json](createUiDefinition.json) con questi step:
 
 1. **Basics** — subscription, region di default, prefisso naming, nome RG, toggle "usa RG esistente".
 2. **Region per componente** — dropdown per ogni servizio (default = region scelta nei Basics; opzionale override).
@@ -113,8 +113,8 @@ az deployment sub create \
   --name aifoundry-private-deploy \
   --location swedencentral \
   --subscription "<SUBSCRIPTION_ID>" \
-  --template-file arm/main.json \
-  --parameters @arm/main.parameters.json \
+  --template-file main.json \
+  --parameters @main.parameters.json \
   --parameters targetSubscriptionId="<SUBSCRIPTION_ID>"
 ```
 
@@ -127,8 +127,8 @@ Select-AzSubscription -SubscriptionId "<SUBSCRIPTION_ID>"
 New-AzSubscriptionDeployment `
   -Name aifoundry-private-deploy `
   -Location swedencentral `
-  -TemplateFile .\arm\main.json `
-  -TemplateParameterFile .\arm\main.parameters.json `
+  -TemplateFile .\main.json `
+  -TemplateParameterFile .\main.parameters.json `
   -targetSubscriptionId "<SUBSCRIPTION_ID>"
 ```
 
@@ -170,11 +170,11 @@ Per ciascun modello, il template crea automaticamente un **backend APIM** chiama
 ```bash
 az deployment sub validate \
   --location swedencentral \
-  --template-file arm/main.json \
-  --parameters @arm/main.parameters.json
+  --template-file main.json \
+  --parameters @main.parameters.json
 
 az deployment sub what-if \
   --location swedencentral \
-  --template-file arm/main.json \
-  --parameters @arm/main.parameters.json
+  --template-file main.json \
+  --parameters @main.parameters.json
 ```
