@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "targetSubscriptionId": { "value": "00000000-0000-0000-0000-000000000000" },
+    "location":            { "value": "swedencentral" },
+    "locations": {
+      "value": {
+        "network":      "",
+        "logAnalytics": "",
+        "keyVault":     "",
+        "foundry":      "",
+        "search":       "",
+        "apim":         "",
+        "cosmos":       "",
+        "serviceBus":   "",
+        "redis":        ""
+      }
+    },
+    "resourceGroupName":   { "value": "rg-aifoundry-private" },
+    "useExistingResourceGroup": { "value": false },
+    "namePrefix":          { "value": "aifp" },
+    "vnetAddressPrefix":   { "value": "10.50.0.0/16" },
+    "subnetPePrefix":      { "value": "10.50.1.0/24" },
+    "subnetApimPrefix":    { "value": "10.50.2.0/24" },
+    "models": {
+      "value": [
+        { "deploymentName": "gpt-5-mini", "modelName": "gpt-5-mini", "format": "OpenAI", "version": "2025-08-07", "skuName": "GlobalStandard", "capacity": 50 }
+      ]
+    },
+    "apimPublisherEmail":  { "value": "admin@contoso.com" },
+    "apimPublisherName":   { "value": "Contoso" },
+
+    "enableDiagnostics":   { "value": true },
+    "diagnosticsPerResource": {
+      "value": {
+        "foundry":    true,
+        "search":     true,
+        "apim":       true,
+        "cosmos":     true,
+        "serviceBus": true,
+        "redis":      true,
+        "keyVault":   true
+      }
+    },
+
+    "enableDefender":      { "value": true },
+    "defenderPlans": {
+      "value": {
+        "VirtualMachines":               true,
+        "AppServices":                   true,
+        "SqlServers":                    true,
+        "SqlServerVirtualMachines":      true,
+        "StorageAccounts":               true,
+        "KeyVaults":                     true,
+        "Arm":                           true,
+        "Containers":                    true,
+        "CosmosDbs":                     true,
+        "OpenSourceRelationalDatabases": false,
+        "Api":                           true,
+        "AiServices":                    true
+      }
+    },
+
+    "tags": {
+      "value": {
+        "workload":  "ai-foundry-private",
+        "managedBy": "arm",
+        "env":       "demo"
+      }
+    }
+  }
+}
