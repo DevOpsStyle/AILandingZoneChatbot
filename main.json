@@ -99,6 +99,49 @@
       "allowedValues": [ "NoSQL", "MongoDB", "Cassandra", "Gremlin", "Table" ],
       "metadata": { "description": "API di Azure Cosmos DB da deployare. NoSQL=SQL/Core (kind GlobalDocumentDB). MongoDB=Mongo RU (kind MongoDB, serverVersion 7.0). Cassandra/Gremlin/Table=GlobalDocumentDB con la corrispondente capability. Cambia anche il groupId del Private Endpoint e la Private DNS zone." }
     },
+    "kvSku": {
+      "type": "string",
+      "defaultValue": "standard",
+      "allowedValues": [ "standard", "premium" ],
+      "metadata": { "description": "Key Vault SKU. premium = HSM-backed." }
+    },
+    "searchSku": {
+      "type": "string",
+      "defaultValue": "standard",
+      "allowedValues": [ "free", "basic", "standard", "standard2", "standard3", "storage_optimized_l1", "storage_optimized_l2" ],
+      "metadata": { "description": "Azure AI Search SKU. 'free' non supporta Private Endpoint." }
+    },
+    "searchReplicas": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "maxValue": 12,
+      "metadata": { "description": "AI Search replica count (alta disponibilità / QPS)." }
+    },
+    "searchPartitions": {
+      "type": "int",
+      "defaultValue": 1,
+      "allowedValues": [ 1, 2, 3, 4, 6, 12 ],
+      "metadata": { "description": "AI Search partition count (capacità indici)." }
+    },
+    "cosmosCapacityMode": {
+      "type": "string",
+      "defaultValue": "Provisioned",
+      "allowedValues": [ "Provisioned", "Serverless" ],
+      "metadata": { "description": "Cosmos DB capacity mode. Serverless = pay-per-request (single region, 1TB/container max). Provisioned = RU/s." }
+    },
+    "sbCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "allowedValues": [ 1, 2, 4, 8, 16 ],
+      "metadata": { "description": "Service Bus Premium messaging units (1/2/4/8/16). SKU forzato a Premium per supporto Private Endpoint." }
+    },
+    "redisSku": {
+      "type": "string",
+      "defaultValue": "Balanced_B5",
+      "allowedValues": [ "Balanced_B0", "Balanced_B1", "Balanced_B3", "Balanced_B5", "Balanced_B10", "Balanced_B50", "MemoryOptimized_M10", "MemoryOptimized_M50", "ComputeOptimized_X10", "ComputeOptimized_X50", "FlashOptimized_A250", "FlashOptimized_A500" ],
+      "metadata": { "description": "Azure Managed Redis (Redis Enterprise) SKU. Balanced=cache generale, MemoryOptimized=workload memory-bound, ComputeOptimized=throughput, FlashOptimized=large dataset su NVMe." }
+    },
     "enableComponents": {
       "type": "object",
       "defaultValue": {
@@ -280,6 +323,13 @@
           "apimPublisherName": { "value": "[parameters('apimPublisherName')]" },
           "apimSku": { "value": "[parameters('apimSku')]" },
           "cosmosApi": { "value": "[parameters('cosmosApi')]" },
+          "kvSku": { "value": "[parameters('kvSku')]" },
+          "searchSku": { "value": "[parameters('searchSku')]" },
+          "searchReplicas": { "value": "[parameters('searchReplicas')]" },
+          "searchPartitions": { "value": "[parameters('searchPartitions')]" },
+          "cosmosCapacityMode": { "value": "[parameters('cosmosCapacityMode')]" },
+          "sbCapacity": { "value": "[parameters('sbCapacity')]" },
+          "redisSku": { "value": "[parameters('redisSku')]" },
           "enableComponents": { "value": "[parameters('enableComponents')]" },
           "enableDiagnostics": { "value": "[parameters('enableDiagnostics')]" },
           "diagnosticsPerResource": { "value": "[parameters('diagnosticsPerResource')]" },
@@ -302,6 +352,13 @@
             "apimPublisherName": { "type": "string" },
             "apimSku": { "type": "string" },
             "cosmosApi": { "type": "string" },
+            "kvSku": { "type": "string" },
+            "searchSku": { "type": "string" },
+            "searchReplicas": { "type": "int" },
+            "searchPartitions": { "type": "int" },
+            "cosmosCapacityMode": { "type": "string" },
+            "sbCapacity": { "type": "int" },
+            "redisSku": { "type": "string" },
             "enableComponents": { "type": "object" },
             "enableDiagnostics": { "type": "bool" },
             "diagnosticsPerResource": { "type": "object" },
@@ -360,7 +417,9 @@
             "enableSb":     "[bool(parameters('enableComponents').serviceBus)]",
             "enableRedis":  "[bool(parameters('enableComponents').redis)]",
             "cosmosKind": "[if(equals(parameters('cosmosApi'),'MongoDB'),'MongoDB','GlobalDocumentDB')]",
-            "cosmosCapabilities": "[if(equals(parameters('cosmosApi'),'Cassandra'), createArray(createObject('name','EnableCassandra')), if(equals(parameters('cosmosApi'),'Gremlin'), createArray(createObject('name','EnableGremlin')), if(equals(parameters('cosmosApi'),'Table'), createArray(createObject('name','EnableTable')), createArray())))]",
+            "cosmosCapApi": "[if(equals(parameters('cosmosApi'),'Cassandra'), createArray(createObject('name','EnableCassandra')), if(equals(parameters('cosmosApi'),'Gremlin'), createArray(createObject('name','EnableGremlin')), if(equals(parameters('cosmosApi'),'Table'), createArray(createObject('name','EnableTable')), createArray())))]",
+            "cosmosCapServerless": "[if(equals(parameters('cosmosCapacityMode'),'Serverless'), createArray(createObject('name','EnableServerless')), createArray())]",
+            "cosmosCapabilities": "[concat(variables('cosmosCapApi'), variables('cosmosCapServerless'))]",
             "cosmosPeGroupId": "[if(equals(parameters('cosmosApi'),'NoSQL'),'Sql', if(equals(parameters('cosmosApi'),'MongoDB'),'MongoDB', if(equals(parameters('cosmosApi'),'Cassandra'),'Cassandra', if(equals(parameters('cosmosApi'),'Gremlin'),'Gremlin','Table'))))]",
             "cosmosDnsZone": "[if(equals(parameters('cosmosApi'),'NoSQL'),'privatelink.documents.azure.com', if(equals(parameters('cosmosApi'),'MongoDB'),'privatelink.mongo.cosmos.azure.com', if(equals(parameters('cosmosApi'),'Cassandra'),'privatelink.cassandra.cosmos.azure.com', if(equals(parameters('cosmosApi'),'Gremlin'),'privatelink.gremlin.cosmos.azure.com','privatelink.table.cosmos.azure.com'))))]"
           },
@@ -492,7 +551,7 @@
               "tags": "[parameters('tags')]",
               "properties": {
                 "tenantId": "[subscription().tenantId]",
-                "sku": { "family": "A", "name": "standard" },
+                "sku": { "family": "A", "name": "[parameters('kvSku')]" },
                 "enableRbacAuthorization": true,
                 "enableSoftDelete": true,
                 "softDeleteRetentionInDays": 7,
@@ -577,11 +636,11 @@
               "name": "[variables('searchName')]",
               "location": "[variables('locSearch')]",
               "tags": "[parameters('tags')]",
-              "sku": { "name": "standard" },
+              "sku": { "name": "[parameters('searchSku')]" },
               "identity": { "type": "SystemAssigned" },
               "properties": {
-                "replicaCount": 1,
-                "partitionCount": 1,
+                "replicaCount": "[parameters('searchReplicas')]",
+                "partitionCount": "[parameters('searchPartitions')]",
                 "hostingMode": "default",
                 "publicNetworkAccess": "disabled",
                 "semanticSearch": "standard",
@@ -659,7 +718,7 @@
               "name": "[variables('sbName')]",
               "location": "[variables('locSb')]",
               "tags": "[parameters('tags')]",
-              "sku": { "name": "Premium", "tier": "Premium", "capacity": 1 },
+              "sku": { "name": "Premium", "tier": "Premium", "capacity": "[parameters('sbCapacity')]" },
               "identity": { "type": "SystemAssigned" },
               "properties": {
                 "publicNetworkAccess": "Disabled",
@@ -676,7 +735,7 @@
               "name": "[variables('redisName')]",
               "location": "[variables('locRedis')]",
               "tags": "[parameters('tags')]",
-              "sku": { "name": "Balanced_B5" },
+              "sku": { "name": "[parameters('redisSku')]" },
               "properties": { "minimumTlsVersion": "1.2" }
             },
             {

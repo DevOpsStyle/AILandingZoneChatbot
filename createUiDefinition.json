@@ -149,6 +149,20 @@
         ]
       },
       {
+        "name": "skus",
+        "label": "SKU & sizing",
+        "elements": [
+          { "name": "info", "type": "Microsoft.Common.InfoBox", "visible": true, "options": { "icon": "Info", "text": "Scegli SKU e sizing per ogni componente abilitato. I controlli si abilitano in base ai toggle dello step precedente. Service Bus è forzato a Premium (SKU richiesta per Private Endpoint), è selezionabile solo la capacity." } },
+          { "name": "kvSku",              "type": "Microsoft.Common.DropDown", "label": "Key Vault SKU",        "defaultValue": "standard", "visible": "[equals(steps('components').enableKv, 'true')]",     "toolTip": "premium = HSM-backed.", "constraints": { "required": true, "allowedValues": [ { "label": "standard", "value": "standard" }, { "label": "premium (HSM)", "value": "premium" } ] } },
+          { "name": "searchSku",          "type": "Microsoft.Common.DropDown", "label": "AI Search SKU",         "defaultValue": "standard", "visible": "[equals(steps('components').enableSearch, 'true')]", "toolTip": "'free' non supporta Private Endpoint.", "constraints": { "required": true, "allowedValues": [ { "label": "free", "value": "free" }, { "label": "basic", "value": "basic" }, { "label": "standard", "value": "standard" }, { "label": "standard2", "value": "standard2" }, { "label": "standard3", "value": "standard3" }, { "label": "storage_optimized_l1", "value": "storage_optimized_l1" }, { "label": "storage_optimized_l2", "value": "storage_optimized_l2" } ] } },
+          { "name": "searchReplicas",     "type": "Microsoft.Common.Slider",   "label": "AI Search replicas",    "defaultValue": 1, "min": 1, "max": 12, "showStepMarkers": true, "visible": "[equals(steps('components').enableSearch, 'true')]", "toolTip": "Replica count (alta disponibilità e QPS).", "constraints": { "required": true } },
+          { "name": "searchPartitions",   "type": "Microsoft.Common.DropDown", "label": "AI Search partitions",  "defaultValue": "1", "visible": "[equals(steps('components').enableSearch, 'true')]", "toolTip": "Partition count (capacità indici).", "constraints": { "required": true, "allowedValues": [ { "label": "1", "value": 1 }, { "label": "2", "value": 2 }, { "label": "3", "value": 3 }, { "label": "4", "value": 4 }, { "label": "6", "value": 6 }, { "label": "12", "value": 12 } ] } },
+          { "name": "cosmosCapacityMode", "type": "Microsoft.Common.DropDown", "label": "Cosmos capacity mode",  "defaultValue": "Provisioned", "visible": "[equals(steps('components').enableCosmos, 'true')]", "toolTip": "Serverless = pay-per-request, single region, max 1TB/container. Provisioned = RU/s.", "constraints": { "required": true, "allowedValues": [ { "label": "Provisioned (RU/s)", "value": "Provisioned" }, { "label": "Serverless", "value": "Serverless" } ] } },
+          { "name": "sbCapacity",         "type": "Microsoft.Common.DropDown", "label": "Service Bus Premium MU", "defaultValue": "1", "visible": "[equals(steps('components').enableSb, 'true')]", "toolTip": "Messaging Units. Service Bus SKU forzata a Premium per Private Endpoint.", "constraints": { "required": true, "allowedValues": [ { "label": "1 MU", "value": 1 }, { "label": "2 MU", "value": 2 }, { "label": "4 MU", "value": 4 }, { "label": "8 MU", "value": 8 }, { "label": "16 MU", "value": 16 } ] } },
+          { "name": "redisSku",           "type": "Microsoft.Common.DropDown", "label": "Azure Managed Redis SKU", "defaultValue": "Balanced_B5", "visible": "[equals(steps('components').enableRedis, 'true')]", "toolTip": "Balanced=cache generale, MemoryOptimized=memory-bound, ComputeOptimized=throughput, FlashOptimized=large dataset NVMe.", "constraints": { "required": true, "allowedValues": [ { "label": "Balanced_B0", "value": "Balanced_B0" }, { "label": "Balanced_B1", "value": "Balanced_B1" }, { "label": "Balanced_B3", "value": "Balanced_B3" }, { "label": "Balanced_B5", "value": "Balanced_B5" }, { "label": "Balanced_B10", "value": "Balanced_B10" }, { "label": "Balanced_B50", "value": "Balanced_B50" }, { "label": "MemoryOptimized_M10", "value": "MemoryOptimized_M10" }, { "label": "MemoryOptimized_M50", "value": "MemoryOptimized_M50" }, { "label": "ComputeOptimized_X10", "value": "ComputeOptimized_X10" }, { "label": "ComputeOptimized_X50", "value": "ComputeOptimized_X50" }, { "label": "FlashOptimized_A250", "value": "FlashOptimized_A250" }, { "label": "FlashOptimized_A500", "value": "FlashOptimized_A500" } ] } }
+        ]
+      },
+      {
         "name": "network",
         "label": "Networking",
         "elements": [
@@ -284,6 +298,13 @@
       "apimPublisherName":        "[steps('apim').apimPublisherName]",
       "apimSku":                  "[steps('apim').apimSku]",
       "cosmosApi":                "[steps('components').cosmosApi]",
+      "kvSku":                    "[steps('skus').kvSku]",
+      "searchSku":                "[steps('skus').searchSku]",
+      "searchReplicas":           "[int(steps('skus').searchReplicas)]",
+      "searchPartitions":         "[int(steps('skus').searchPartitions)]",
+      "cosmosCapacityMode":       "[steps('skus').cosmosCapacityMode]",
+      "sbCapacity":               "[int(steps('skus').sbCapacity)]",
+      "redisSku":                 "[steps('skus').redisSku]",
       "enableComponents": {
         "keyVault":   "[equals(steps('components').enableKv, 'true')]",
         "aiSearch":   "[equals(steps('components').enableSearch, 'true')]",

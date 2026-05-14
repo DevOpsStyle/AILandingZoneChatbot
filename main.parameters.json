@@ -33,6 +33,13 @@
     "apimPublisherName":   { "value": "Contoso" },
     "apimSku":             { "value": "StandardV2" },
     "cosmosApi":           { "value": "NoSQL" },
+    "kvSku":               { "value": "standard" },
+    "searchSku":           { "value": "standard" },
+    "searchReplicas":      { "value": 1 },
+    "searchPartitions":    { "value": 1 },
+    "cosmosCapacityMode":  { "value": "Provisioned" },
+    "sbCapacity":          { "value": 1 },
+    "redisSku":            { "value": "Balanced_B5" },
 
     "enableComponents": {
       "value": {
