@@ -8,9 +8,6 @@
       "basics": {
         "description": "**AI Foundry Private Landing Zone** — deploy completo (AI Foundry + GPT-5-Mini + text-embedding-3-large, AI Search, APIM, Cosmos DB, Service Bus, Azure Managed Redis, Key Vault) in modalità privata (Private Endpoint + Private DNS), con diagnostica su Log Analytics e Defender for Cloud opzionali.",
         "subscription": {
-          "constraints": {
-            "validations": []
-          },
           "resourceProviders": [
             "Microsoft.CognitiveServices",
             "Microsoft.Search",
