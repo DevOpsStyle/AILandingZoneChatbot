@@ -451,7 +451,7 @@
               "identity": { "type": "SystemAssigned" },
               "properties": {
                 "customSubDomainName": "[variables('foundryName')]",
-                "publicNetworkAccess": "Disabled",
+                "publicNetworkAccess": "Enabled",
                 "disableLocalAuth": false,
                 "networkAcls": { "defaultAction": "Deny", "virtualNetworkRules": [], "ipRules": [] }
               }
@@ -513,7 +513,7 @@
               "properties": {
                 "publisherEmail": "[parameters('apimPublisherEmail')]",
                 "publisherName": "[parameters('apimPublisherName')]",
-                "publicNetworkAccess": "Disabled",
+                "publicNetworkAccess": "Enabled",
                 "virtualNetworkType": "None"
               }
             },
@@ -982,6 +982,74 @@
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
                 "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
                 "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+              }
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2024-03-01",
+              "name": "harden-private-access",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('foundryName')), 'default')]",
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('apimName')), 'default')]"
+              ],
+              "properties": {
+                "mode": "Incremental",
+                "expressionEvaluationOptions": { "scope": "inner" },
+                "parameters": {
+                  "foundryName":   { "value": "[variables('foundryName')]" },
+                  "apimName":      { "value": "[variables('apimName')]" },
+                  "locFoundry":    { "value": "[variables('locFoundry')]" },
+                  "locApim":       { "value": "[variables('locApim')]" },
+                  "tags":          { "value": "[parameters('tags')]" },
+                  "publisherEmail":{ "value": "[parameters('apimPublisherEmail')]" },
+                  "publisherName": { "value": "[parameters('apimPublisherName')]" }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "parameters": {
+                    "foundryName":    { "type": "string" },
+                    "apimName":       { "type": "string" },
+                    "locFoundry":     { "type": "string" },
+                    "locApim":        { "type": "string" },
+                    "tags":           { "type": "object" },
+                    "publisherEmail": { "type": "string" },
+                    "publisherName":  { "type": "string" }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.CognitiveServices/accounts",
+                      "apiVersion": "2024-10-01",
+                      "name": "[parameters('foundryName')]",
+                      "location": "[parameters('locFoundry')]",
+                      "tags": "[parameters('tags')]",
+                      "kind": "AIServices",
+                      "sku": { "name": "S0" },
+                      "identity": { "type": "SystemAssigned" },
+                      "properties": {
+                        "customSubDomainName": "[parameters('foundryName')]",
+                        "publicNetworkAccess": "Disabled",
+                        "disableLocalAuth": false,
+                        "networkAcls": { "defaultAction": "Deny", "virtualNetworkRules": [], "ipRules": [] }
+                      }
+                    },
+                    {
+                      "type": "Microsoft.ApiManagement/service",
+                      "apiVersion": "2024-05-01",
+                      "name": "[parameters('apimName')]",
+                      "location": "[parameters('locApim')]",
+                      "tags": "[parameters('tags')]",
+                      "sku": { "name": "StandardV2", "capacity": 1 },
+                      "identity": { "type": "SystemAssigned" },
+                      "properties": {
+                        "publisherEmail": "[parameters('publisherEmail')]",
+                        "publisherName": "[parameters('publisherName')]",
+                        "publicNetworkAccess": "Disabled",
+                        "virtualNetworkType": "None"
+                      }
+                    }
+                  ]
+                }
               }
             }
           ],
