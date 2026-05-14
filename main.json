@@ -709,7 +709,10 @@
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('foundryName')))]",
                 "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.cognitiveservices.azure.com')]",
                 "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.openai.azure.com')]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.services.ai.azure.com')]"
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.services.ai.azure.com')]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.cognitiveservices.azure.com', format('link-{0}', variables('vnetName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.openai.azure.com', format('link-{0}', variables('vnetName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.services.ai.azure.com', format('link-{0}', variables('vnetName')))]"
               ],
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -751,7 +754,8 @@
               "name": "[format('pe-{0}/default', variables('searchName'))]",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('searchName')))]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.search.windows.net')]"
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.search.windows.net')]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.search.windows.net', format('link-{0}', variables('vnetName')))]"
               ],
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -791,7 +795,8 @@
               "name": "[format('pe-{0}/default', variables('apimName'))]",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('apimName')))]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azure-api.net')]"
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azure-api.net')]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.azure-api.net', format('link-{0}', variables('vnetName')))]"
               ],
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -831,7 +836,8 @@
               "name": "[format('pe-{0}/default', variables('cosmosName'))]",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('cosmosName')))]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.documents.azure.com')]"
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.documents.azure.com')]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.documents.azure.com', format('link-{0}', variables('vnetName')))]"
               ],
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -871,7 +877,8 @@
               "name": "[format('pe-{0}/default', variables('sbName'))]",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('sbName')))]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.servicebus.windows.net')]"
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.servicebus.windows.net')]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.servicebus.windows.net', format('link-{0}', variables('vnetName')))]"
               ],
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -912,7 +919,8 @@
               "name": "[format('pe-{0}/default', variables('redisName'))]",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('redisName')))]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.redis.azure.net')]"
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.redis.azure.net')]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.redis.azure.net', format('link-{0}', variables('vnetName')))]"
               ],
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -952,7 +960,8 @@
               "name": "[format('pe-{0}/default', variables('kvName'))]",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('kvName')))]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]"
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.vaultcore.azure.net', format('link-{0}', variables('vnetName')))]"
               ],
               "properties": {
                 "privateDnsZoneConfigs": [
