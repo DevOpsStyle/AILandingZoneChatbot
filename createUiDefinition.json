@@ -85,8 +85,8 @@
         "constraints": {
           "required": true,
           "allowedValues": [
-            { "label": "True",  "value": true },
-            { "label": "False", "value": false }
+            { "label": "True",  "value": "true" },
+            { "label": "False", "value": "false" }
           ]
         }
       }
@@ -194,34 +194,34 @@
         "name": "diagnostics",
         "label": "Diagnostica (Log Analytics)",
         "elements": [
-          { "name": "enableDiagnostics", "type": "Microsoft.Common.DropDown", "label": "Abilita diagnostica su Log Analytics (master switch)", "defaultValue": "True",  "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "diagFoundry",    "type": "Microsoft.Common.DropDown", "label": "AI Foundry",          "defaultValue": "True", "visible": "[steps('diagnostics').enableDiagnostics]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "diagSearch",     "type": "Microsoft.Common.DropDown", "label": "AI Search",           "defaultValue": "True", "visible": "[steps('diagnostics').enableDiagnostics]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "diagApim",       "type": "Microsoft.Common.DropDown", "label": "APIM",                "defaultValue": "True", "visible": "[steps('diagnostics').enableDiagnostics]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "diagCosmos",     "type": "Microsoft.Common.DropDown", "label": "Cosmos DB",           "defaultValue": "True", "visible": "[steps('diagnostics').enableDiagnostics]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "diagServiceBus", "type": "Microsoft.Common.DropDown", "label": "Service Bus",         "defaultValue": "True", "visible": "[steps('diagnostics').enableDiagnostics]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "diagRedis",      "type": "Microsoft.Common.DropDown", "label": "Azure Managed Redis", "defaultValue": "True", "visible": "[steps('diagnostics').enableDiagnostics]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "diagKeyVault",   "type": "Microsoft.Common.DropDown", "label": "Key Vault",           "defaultValue": "True", "visible": "[steps('diagnostics').enableDiagnostics]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } }
+          { "name": "enableDiagnostics", "type": "Microsoft.Common.DropDown", "label": "Abilita diagnostica su Log Analytics (master switch)", "defaultValue": "True",  "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "diagFoundry",    "type": "Microsoft.Common.DropDown", "label": "AI Foundry",          "defaultValue": "True", "visible": "[bool(steps('diagnostics').enableDiagnostics)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "diagSearch",     "type": "Microsoft.Common.DropDown", "label": "AI Search",           "defaultValue": "True", "visible": "[bool(steps('diagnostics').enableDiagnostics)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "diagApim",       "type": "Microsoft.Common.DropDown", "label": "APIM",                "defaultValue": "True", "visible": "[bool(steps('diagnostics').enableDiagnostics)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "diagCosmos",     "type": "Microsoft.Common.DropDown", "label": "Cosmos DB",           "defaultValue": "True", "visible": "[bool(steps('diagnostics').enableDiagnostics)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "diagServiceBus", "type": "Microsoft.Common.DropDown", "label": "Service Bus",         "defaultValue": "True", "visible": "[bool(steps('diagnostics').enableDiagnostics)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "diagRedis",      "type": "Microsoft.Common.DropDown", "label": "Azure Managed Redis", "defaultValue": "True", "visible": "[bool(steps('diagnostics').enableDiagnostics)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "diagKeyVault",   "type": "Microsoft.Common.DropDown", "label": "Key Vault",           "defaultValue": "True", "visible": "[bool(steps('diagnostics').enableDiagnostics)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } }
         ]
       },
       {
         "name": "defender",
         "label": "Defender for Cloud",
         "elements": [
-          { "name": "enableDefender", "type": "Microsoft.Common.DropDown", "label": "Abilita Defender for Cloud (master switch)", "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "info", "type": "Microsoft.Common.InfoBox", "visible": "[steps('defender').enableDefender]", "options": { "icon": "Warning", "text": "I piani Defender vengono attivati a livello di subscription. Disattivali singolarmente se non li vuoi." } },
-          { "name": "pAiServices",    "type": "Microsoft.Common.DropDown", "label": "AI Services",        "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pApi",           "type": "Microsoft.Common.DropDown", "label": "API",                "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pCosmos",        "type": "Microsoft.Common.DropDown", "label": "Cosmos DB",          "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pKeyVaults",     "type": "Microsoft.Common.DropDown", "label": "Key Vaults",         "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pStorage",       "type": "Microsoft.Common.DropDown", "label": "Storage Accounts",   "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pContainers",    "type": "Microsoft.Common.DropDown", "label": "Containers",         "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pArm",           "type": "Microsoft.Common.DropDown", "label": "Resource Manager",   "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pVm",            "type": "Microsoft.Common.DropDown", "label": "Virtual Machines",   "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pAppServices",   "type": "Microsoft.Common.DropDown", "label": "App Services",       "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pSql",           "type": "Microsoft.Common.DropDown", "label": "SQL Servers",        "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pSqlVm",         "type": "Microsoft.Common.DropDown", "label": "SQL on VMs",         "defaultValue": "True",  "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } },
-          { "name": "pOssDb",         "type": "Microsoft.Common.DropDown", "label": "Open-Source DB",     "defaultValue": "False", "visible": "[steps('defender').enableDefender]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": true }, { "label": "False", "value": false } ] } }
+          { "name": "enableDefender", "type": "Microsoft.Common.DropDown", "label": "Abilita Defender for Cloud (master switch)", "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "info", "type": "Microsoft.Common.InfoBox", "visible": "[bool(steps('defender').enableDefender)]", "options": { "icon": "Warning", "text": "I piani Defender vengono attivati a livello di subscription. Disattivali singolarmente se non li vuoi." } },
+          { "name": "pAiServices",    "type": "Microsoft.Common.DropDown", "label": "AI Services",        "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pApi",           "type": "Microsoft.Common.DropDown", "label": "API",                "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pCosmos",        "type": "Microsoft.Common.DropDown", "label": "Cosmos DB",          "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pKeyVaults",     "type": "Microsoft.Common.DropDown", "label": "Key Vaults",         "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pStorage",       "type": "Microsoft.Common.DropDown", "label": "Storage Accounts",   "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pContainers",    "type": "Microsoft.Common.DropDown", "label": "Containers",         "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pArm",           "type": "Microsoft.Common.DropDown", "label": "Resource Manager",   "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pVm",            "type": "Microsoft.Common.DropDown", "label": "Virtual Machines",   "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pAppServices",   "type": "Microsoft.Common.DropDown", "label": "App Services",       "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pSql",           "type": "Microsoft.Common.DropDown", "label": "SQL Servers",        "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pSqlVm",         "type": "Microsoft.Common.DropDown", "label": "SQL on VMs",         "defaultValue": "True",  "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "pOssDb",         "type": "Microsoft.Common.DropDown", "label": "Open-Source DB",     "defaultValue": "False", "visible": "[bool(steps('defender').enableDefender)]", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } }
         ]
       },
       {
@@ -238,7 +238,7 @@
       "targetSubscriptionId":     "[subscription().subscriptionId]",
       "location":                 "[location()]",
       "resourceGroupName":        "[basics('resourceGroupName')]",
-      "useExistingResourceGroup": "[basics('useExistingResourceGroup')]",
+      "useExistingResourceGroup": "[bool(basics('useExistingResourceGroup'))]",
       "namePrefix":               "[basics('namePrefix')]",
       "vnetAddressPrefix":        "[steps('network').vnetAddressPrefix]",
       "subnetPePrefix":           "[steps('network').subnetPePrefix]",
@@ -257,30 +257,30 @@
         "serviceBus":   "[if(equals(steps('regions').locServiceBus,   'default'), '', steps('regions').locServiceBus)]",
         "redis":        "[if(equals(steps('regions').locRedis,        'default'), '', steps('regions').locRedis)]"
       },
-      "enableDiagnostics": "[steps('diagnostics').enableDiagnostics]",
+      "enableDiagnostics": "[bool(steps('diagnostics').enableDiagnostics)]",
       "diagnosticsPerResource": {
-        "foundry":    "[steps('diagnostics').diagFoundry]",
-        "search":     "[steps('diagnostics').diagSearch]",
-        "apim":       "[steps('diagnostics').diagApim]",
-        "cosmos":     "[steps('diagnostics').diagCosmos]",
-        "serviceBus": "[steps('diagnostics').diagServiceBus]",
-        "redis":      "[steps('diagnostics').diagRedis]",
-        "keyVault":   "[steps('diagnostics').diagKeyVault]"
+        "foundry":    "[bool(steps('diagnostics').diagFoundry)]",
+        "search":     "[bool(steps('diagnostics').diagSearch)]",
+        "apim":       "[bool(steps('diagnostics').diagApim)]",
+        "cosmos":     "[bool(steps('diagnostics').diagCosmos)]",
+        "serviceBus": "[bool(steps('diagnostics').diagServiceBus)]",
+        "redis":      "[bool(steps('diagnostics').diagRedis)]",
+        "keyVault":   "[bool(steps('diagnostics').diagKeyVault)]"
       },
-      "enableDefender": "[steps('defender').enableDefender]",
+      "enableDefender": "[bool(steps('defender').enableDefender)]",
       "defenderPlans": {
-        "VirtualMachines":               "[steps('defender').pVm]",
-        "AppServices":                   "[steps('defender').pAppServices]",
-        "SqlServers":                    "[steps('defender').pSql]",
-        "SqlServerVirtualMachines":      "[steps('defender').pSqlVm]",
-        "StorageAccounts":               "[steps('defender').pStorage]",
-        "KeyVaults":                     "[steps('defender').pKeyVaults]",
-        "Arm":                           "[steps('defender').pArm]",
-        "Containers":                    "[steps('defender').pContainers]",
-        "CosmosDbs":                     "[steps('defender').pCosmos]",
-        "OpenSourceRelationalDatabases": "[steps('defender').pOssDb]",
-        "Api":                           "[steps('defender').pApi]",
-        "AiServices":                    "[steps('defender').pAiServices]"
+        "VirtualMachines":               "[bool(steps('defender').pVm)]",
+        "AppServices":                   "[bool(steps('defender').pAppServices)]",
+        "SqlServers":                    "[bool(steps('defender').pSql)]",
+        "SqlServerVirtualMachines":      "[bool(steps('defender').pSqlVm)]",
+        "StorageAccounts":               "[bool(steps('defender').pStorage)]",
+        "KeyVaults":                     "[bool(steps('defender').pKeyVaults)]",
+        "Arm":                           "[bool(steps('defender').pArm)]",
+        "Containers":                    "[bool(steps('defender').pContainers)]",
+        "CosmosDbs":                     "[bool(steps('defender').pCosmos)]",
+        "OpenSourceRelationalDatabases": "[bool(steps('defender').pOssDb)]",
+        "Api":                           "[bool(steps('defender').pApi)]",
+        "AiServices":                    "[bool(steps('defender').pAiServices)]"
       },
       "tags": {
         "workload":  "[steps('tagsStep').workload]",
