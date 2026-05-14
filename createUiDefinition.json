@@ -185,8 +185,8 @@
         "elements": [
           { "name": "apimPublisherEmail", "type": "Microsoft.Common.TextBox", "label": "Publisher email", "defaultValue": "admin@contoso.com", "constraints": { "required": true, "regex": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", "validationMessage": "Email non valida." } },
           { "name": "apimPublisherName",  "type": "Microsoft.Common.TextBox", "label": "Publisher name",  "defaultValue": "Contoso", "constraints": { "required": true } },
-          { "name": "apimSku", "type": "Microsoft.Common.DropDown", "label": "SKU APIM", "defaultValue": "StandardV2 (più economica, hardening post-creazione)", "constraints": { "required": true, "allowedValues": [ { "label": "StandardV2 (più economica, hardening post-creazione)", "value": "StandardV2" }, { "label": "PremiumV2 (private-only nativo, più costosa)", "value": "PremiumV2" } ] } },
-          { "name": "apimSkuInfo", "type": "Microsoft.Common.InfoBox", "visible": true, "options": { "icon": "Info", "text": "**StandardV2**: APIM viene creato con accesso pubblico abilitato e poi disabilitato (hardening) automaticamente dopo che il Private Endpoint è pronto. **PremiumV2**: APIM viene creato direttamente con `publicNetworkAccess: Disabled` (richiede SKU Premium V2)." } }
+          { "name": "apimSku", "type": "Microsoft.Common.DropDown", "label": "SKU APIM", "defaultValue": "StandardV2 (più economica)", "constraints": { "required": true, "allowedValues": [ { "label": "StandardV2 (più economica)", "value": "StandardV2" }, { "label": "PremiumV2 (più scalabile, AZ, dedicated compute)", "value": "PremiumV2" } ] } },
+          { "name": "apimSkuInfo", "type": "Microsoft.Common.InfoBox", "visible": true, "options": { "icon": "Info", "text": "Per entrambe le SKU APIM viene creato con `publicNetworkAccess: Enabled` e poi disabilitato (hardening) automaticamente dopo che il Private Endpoint è pronto. Azure non consente di creare un APIM con accesso pubblico disabilitato in un solo step. **PremiumV2** offre Availability Zones, dedicated App Service Environment e maggior throughput; **StandardV2** è più economica per workload di sviluppo/test." } }
         ]
       },
       {
@@ -281,7 +281,7 @@
         "CosmosDbs":                     "[equals(steps('defender').pCosmos, 'true')]",
         "OpenSourceRelationalDatabases": "[equals(steps('defender').pOssDb, 'true')]",
         "Api":                           "[equals(steps('defender').pApi, 'true')]",
-        "AiServices":                    "[equals(steps('defender').pAiServices, 'true')]"
+        "AI":                            "[equals(steps('defender').pAiServices, 'true')]"
       },
       "tags": {
         "workload":  "[steps('tagsStep').workload]",

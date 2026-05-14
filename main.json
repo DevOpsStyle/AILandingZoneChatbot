@@ -119,7 +119,7 @@
         "CosmosDbs": true,
         "OpenSourceRelationalDatabases": false,
         "Api": true,
-        "AiServices": true
+        "AI": true
       },
       "metadata": { "description": "Toggle per singolo piano Defender. Vengono creati solo quelli a true (richiede enableDefender=true)." }
     },
@@ -204,7 +204,7 @@
               "CosmosDbs",
               "OpenSourceRelationalDatabases",
               "Api",
-              "AiServices"
+              "AI"
             ]
           },
           "resources": [
@@ -466,29 +466,54 @@
             },
             {
               "condition": "[greater(length(parameters('models')), 0)]",
-              "type": "Microsoft.CognitiveServices/accounts/deployments",
-              "apiVersion": "2024-10-01",
-              "name": "[format('{0}/{1}', variables('foundryName'), parameters('models')[copyIndex('modelLoop')].deploymentName)]",
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2024-03-01",
+              "name": "foundry-models-deploy",
               "dependsOn": [
                 "[resourceId('Microsoft.CognitiveServices/accounts', variables('foundryName'))]"
               ],
-              "sku": {
-                "name": "[parameters('models')[copyIndex('modelLoop')].skuName]",
-                "capacity": "[parameters('models')[copyIndex('modelLoop')].capacity]"
-              },
               "properties": {
-                "model": {
-                  "format": "[parameters('models')[copyIndex('modelLoop')].format]",
-                  "name": "[parameters('models')[copyIndex('modelLoop')].modelName]",
-                  "version": "[parameters('models')[copyIndex('modelLoop')].version]"
+                "mode": "Incremental",
+                "expressionEvaluationOptions": { "scope": "inner" },
+                "parameters": {
+                  "foundryName": { "value": "[variables('foundryName')]" },
+                  "foundryProvisioningState": { "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('foundryName')), '2024-10-01', 'Full').properties.provisioningState]" },
+                  "models": { "value": "[parameters('models')]" }
                 },
-                "raiPolicyName": "Microsoft.DefaultV2"
-              },
-              "copy": {
-                "name": "modelLoop",
-                "count": "[length(parameters('models'))]",
-                "mode": "Serial",
-                "batchSize": 1
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "parameters": {
+                    "foundryName": { "type": "string" },
+                    "foundryProvisioningState": { "type": "string" },
+                    "models": { "type": "array" }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.CognitiveServices/accounts/deployments",
+                      "apiVersion": "2024-10-01",
+                      "name": "[format('{0}/{1}', parameters('foundryName'), parameters('models')[copyIndex('modelLoop')].deploymentName)]",
+                      "sku": {
+                        "name": "[parameters('models')[copyIndex('modelLoop')].skuName]",
+                        "capacity": "[parameters('models')[copyIndex('modelLoop')].capacity]"
+                      },
+                      "properties": {
+                        "model": {
+                          "format": "[parameters('models')[copyIndex('modelLoop')].format]",
+                          "name": "[parameters('models')[copyIndex('modelLoop')].modelName]",
+                          "version": "[parameters('models')[copyIndex('modelLoop')].version]"
+                        },
+                        "raiPolicyName": "Microsoft.DefaultV2"
+                      },
+                      "copy": {
+                        "name": "modelLoop",
+                        "count": "[length(parameters('models'))]",
+                        "mode": "Serial",
+                        "batchSize": 1
+                      }
+                    }
+                  ]
+                }
               }
             },
 
@@ -521,7 +546,7 @@
               "properties": {
                 "publisherEmail": "[parameters('apimPublisherEmail')]",
                 "publisherName": "[parameters('apimPublisherName')]",
-                "publicNetworkAccess": "[if(equals(parameters('apimSku'), 'PremiumV2'), 'Disabled', 'Enabled')]",
+                "publicNetworkAccess": "Enabled",
                 "virtualNetworkType": "None"
               }
             },
@@ -534,7 +559,7 @@
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', variables('apimName'))]",
                 "[resourceId('Microsoft.CognitiveServices/accounts', variables('foundryName'))]",
-                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('foundryName'), parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]"
+                "[resourceId('Microsoft.Resources/deployments', 'foundry-models-deploy')]"
               ],
               "properties": {
                 "title": "[format('Foundry - {0}', parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]",
@@ -998,7 +1023,8 @@
               "name": "harden-private-access",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('foundryName')), 'default')]",
-                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('apimName')), 'default')]"
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('apimName')), 'default')]",
+                "[resourceId('Microsoft.Resources/deployments', 'foundry-models-deploy')]"
               ],
               "properties": {
                 "mode": "Incremental",
@@ -1044,7 +1070,6 @@
                       }
                     },
                     {
-                      "condition": "[equals(parameters('apimSku'), 'StandardV2')]",
                       "type": "Microsoft.ApiManagement/service",
                       "apiVersion": "2024-05-01",
                       "name": "[parameters('apimName')]",

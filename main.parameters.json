@@ -59,7 +59,7 @@
         "CosmosDbs":                     true,
         "OpenSourceRelationalDatabases": false,
         "Api":                           true,
-        "AiServices":                    true
+        "AI":                            true
       }
     },
 
