@@ -20,6 +20,7 @@
     "resourceGroupName":   { "value": "rg-aifoundry-private" },
     "useExistingResourceGroup": { "value": false },
     "namePrefix":          { "value": "aifp" },
+    "nameSalt":            { "value": "" },
     "vnetAddressPrefix":   { "value": "10.50.0.0/16" },
     "subnetPePrefix":      { "value": "10.50.1.0/24" },
     "subnetApimPrefix":    { "value": "10.50.2.0/24" },

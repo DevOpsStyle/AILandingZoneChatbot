@@ -64,6 +64,27 @@
         }
       },
       {
+        "name": "nameSalt",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Salt univoco (opzionale)",
+        "defaultValue": "",
+        "toolTip": "Lascia vuoto per usare automaticamente la data odierna (yyMMdd) come salt. Compila per fissare manualmente un valore.",
+        "constraints": {
+          "required": false,
+          "regex": "^[a-z0-9]{0,8}$",
+          "validationMessage": "Max 8 caratteri minuscoli/numeri (es. 'demo01')."
+        }
+      },
+      {
+        "name": "nameSaltInfo",
+        "type": "Microsoft.Common.InfoBox",
+        "visible": true,
+        "options": {
+          "icon": "Info",
+          "text": "I nomi univoci (Key Vault, Foundry, APIM, ecc.) sono calcolati come `uniqueString(rgId, salt)`. Se lasci il campo vuoto, il salt sarà la data odierna in formato YYMMDD: reruns nello stesso giorno sono idempotenti, reruns in giorni diversi producono nomi nuovi → niente collisioni con Key Vault soft-deleted da deploy precedenti. Se vuoi nomi stabili nel tempo, fissa un salt manualmente (es. 'prod01')."
+        }
+      },
+      {
         "name": "resourceGroupName",
         "type": "Microsoft.Common.TextBox",
         "label": "Nome Resource Group",
@@ -239,6 +260,7 @@
       "resourceGroupName":        "[basics('resourceGroupName')]",
       "useExistingResourceGroup": "[equals(basics('useExistingResourceGroup'), 'true')]",
       "namePrefix":               "[basics('namePrefix')]",
+      "nameSalt":                 "[basics('nameSalt')]",
       "vnetAddressPrefix":        "[steps('network').vnetAddressPrefix]",
       "subnetPePrefix":           "[steps('network').subnetPePrefix]",
       "subnetApimPrefix":         "[steps('network').subnetApimPrefix]",

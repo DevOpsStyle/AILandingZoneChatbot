@@ -47,6 +47,17 @@
       "maxLength": 8,
       "metadata": { "description": "Prefisso per la naming convention (2-8 char)." }
     },
+    "nameSalt": {
+      "type": "string",
+      "defaultValue": "",
+      "maxLength": 8,
+      "metadata": { "description": "Salt opzionale per generare nomi univoci. Lascia vuoto per usare automaticamente la data odierna (formato yyMMdd) come salt: reruns nello stesso giorno sono idempotenti, reruns in giorno diverso producono nomi nuovi (utile per evitare collisioni con risorse soft-deleted come Key Vault)." }
+    },
+    "autoSalt": {
+      "type": "string",
+      "defaultValue": "[utcNow('yyMMdd')]",
+      "metadata": { "description": "(interno) Calcolato automaticamente come data odierna; usato solo se nameSalt è vuoto. Non passarlo dal wizard." }
+    },
     "vnetAddressPrefix": {
       "type": "string",
       "defaultValue": "10.50.0.0/16"
@@ -241,6 +252,8 @@
           "location": { "value": "[parameters('location')]" },
           "locations": { "value": "[parameters('locations')]" },
           "namePrefix": { "value": "[variables('namePrefix')]" },
+          "nameSalt": { "value": "[parameters('nameSalt')]" },
+          "autoSalt": { "value": "[parameters('autoSalt')]" },
           "vnetAddressPrefix": { "value": "[parameters('vnetAddressPrefix')]" },
           "subnetPePrefix": { "value": "[parameters('subnetPePrefix')]" },
           "subnetApimPrefix": { "value": "[parameters('subnetApimPrefix')]" },
@@ -259,6 +272,8 @@
             "location": { "type": "string" },
             "locations": { "type": "object" },
             "namePrefix": { "type": "string" },
+            "nameSalt": { "type": "string" },
+            "autoSalt": { "type": "string" },
             "vnetAddressPrefix": { "type": "string" },
             "subnetPePrefix": { "type": "string" },
             "subnetApimPrefix": { "type": "string" },
@@ -271,7 +286,8 @@
             "tags": { "type": "object" }
           },
           "variables": {
-            "uniq": "[uniqueString(resourceGroup().id)]",
+            "effectiveSalt": "[if(empty(parameters('nameSalt')), parameters('autoSalt'), parameters('nameSalt'))]",
+            "uniq": "[uniqueString(resourceGroup().id, variables('effectiveSalt'))]",
             "locNetwork":      "[if(empty(parameters('locations').network),      parameters('location'), parameters('locations').network)]",
             "locLaw":          "[if(empty(parameters('locations').logAnalytics), parameters('location'), parameters('locations').logAnalytics)]",
             "locKv":           "[if(empty(parameters('locations').keyVault),     parameters('location'), parameters('locations').keyVault)]",
