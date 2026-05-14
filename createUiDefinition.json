@@ -143,6 +143,7 @@
           { "name": "enableSearch", "type": "Microsoft.Common.DropDown", "label": "Azure AI Search",       "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
           { "name": "enableApim",   "type": "Microsoft.Common.DropDown", "label": "API Management",        "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
           { "name": "enableCosmos", "type": "Microsoft.Common.DropDown", "label": "Cosmos DB (NoSQL)",      "defaultValue": "True", "toolTip": "Cosmos DB è il nome attuale di quello che storicamente era chiamato 'DocumentDB'. Il provider ARM è Microsoft.DocumentDB ma il prodotto è Azure Cosmos DB for NoSQL.", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "cosmosApi",    "type": "Microsoft.Common.DropDown", "label": "Cosmos DB API",         "defaultValue": "NoSQL", "visible": "[equals(steps('components').enableCosmos, 'true')]", "toolTip": "Scegli quale API esporre. NoSQL=SQL/Core (default). MongoDB=Mongo RU (serverVersion 7.0). Cassandra/Gremlin/Table=API specifica con la corrispondente capability. Cambia anche il groupId del Private Endpoint e la Private DNS zone.", "constraints": { "required": true, "allowedValues": [ { "label": "NoSQL (SQL/Core)", "value": "NoSQL" }, { "label": "MongoDB (RU)", "value": "MongoDB" }, { "label": "Cassandra", "value": "Cassandra" }, { "label": "Gremlin", "value": "Gremlin" }, { "label": "Table", "value": "Table" } ] } },
           { "name": "enableSb",     "type": "Microsoft.Common.DropDown", "label": "Service Bus (Premium)",  "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
           { "name": "enableRedis",  "type": "Microsoft.Common.DropDown", "label": "Azure Managed Redis",   "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } }
         ]
@@ -282,6 +283,7 @@
       "apimPublisherEmail":       "[steps('apim').apimPublisherEmail]",
       "apimPublisherName":        "[steps('apim').apimPublisherName]",
       "apimSku":                  "[steps('apim').apimSku]",
+      "cosmosApi":                "[steps('components').cosmosApi]",
       "enableComponents": {
         "keyVault":   "[equals(steps('components').enableKv, 'true')]",
         "aiSearch":   "[equals(steps('components').enableSearch, 'true')]",

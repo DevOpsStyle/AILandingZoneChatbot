@@ -93,6 +93,12 @@
       "allowedValues": [ "StandardV2", "PremiumV2" ],
       "metadata": { "description": "SKU APIM. StandardV2: hardening post-creazione (publicNetworkAccess viene disabilitato dopo il PE). PremiumV2: creazione direttamente con publicNetworkAccess=Disabled." }
     },
+    "cosmosApi": {
+      "type": "string",
+      "defaultValue": "NoSQL",
+      "allowedValues": [ "NoSQL", "MongoDB", "Cassandra", "Gremlin", "Table" ],
+      "metadata": { "description": "API di Azure Cosmos DB da deployare. NoSQL=SQL/Core (kind GlobalDocumentDB). MongoDB=Mongo RU (kind MongoDB, serverVersion 7.0). Cassandra/Gremlin/Table=GlobalDocumentDB con la corrispondente capability. Cambia anche il groupId del Private Endpoint e la Private DNS zone." }
+    },
     "enableComponents": {
       "type": "object",
       "defaultValue": {
@@ -273,6 +279,7 @@
           "apimPublisherEmail": { "value": "[parameters('apimPublisherEmail')]" },
           "apimPublisherName": { "value": "[parameters('apimPublisherName')]" },
           "apimSku": { "value": "[parameters('apimSku')]" },
+          "cosmosApi": { "value": "[parameters('cosmosApi')]" },
           "enableComponents": { "value": "[parameters('enableComponents')]" },
           "enableDiagnostics": { "value": "[parameters('enableDiagnostics')]" },
           "diagnosticsPerResource": { "value": "[parameters('diagnosticsPerResource')]" },
@@ -294,6 +301,7 @@
             "apimPublisherEmail": { "type": "string" },
             "apimPublisherName": { "type": "string" },
             "apimSku": { "type": "string" },
+            "cosmosApi": { "type": "string" },
             "enableComponents": { "type": "object" },
             "enableDiagnostics": { "type": "bool" },
             "diagnosticsPerResource": { "type": "object" },
@@ -330,6 +338,10 @@
               "privatelink.search.windows.net",
               "privatelink.azure-api.net",
               "privatelink.documents.azure.com",
+              "privatelink.mongo.cosmos.azure.com",
+              "privatelink.cassandra.cosmos.azure.com",
+              "privatelink.gremlin.cosmos.azure.com",
+              "privatelink.table.cosmos.azure.com",
               "privatelink.servicebus.windows.net",
               "privatelink.redis.azure.net",
               "privatelink.vaultcore.azure.net"
@@ -346,7 +358,11 @@
             "enableApim":   "[bool(parameters('enableComponents').apim)]",
             "enableCosmos": "[bool(parameters('enableComponents').cosmos)]",
             "enableSb":     "[bool(parameters('enableComponents').serviceBus)]",
-            "enableRedis":  "[bool(parameters('enableComponents').redis)]"
+            "enableRedis":  "[bool(parameters('enableComponents').redis)]",
+            "cosmosKind": "[if(equals(parameters('cosmosApi'),'MongoDB'),'MongoDB','GlobalDocumentDB')]",
+            "cosmosCapabilities": "[if(equals(parameters('cosmosApi'),'Cassandra'), createArray(createObject('name','EnableCassandra')), if(equals(parameters('cosmosApi'),'Gremlin'), createArray(createObject('name','EnableGremlin')), if(equals(parameters('cosmosApi'),'Table'), createArray(createObject('name','EnableTable')), createArray())))]",
+            "cosmosPeGroupId": "[if(equals(parameters('cosmosApi'),'NoSQL'),'Sql', if(equals(parameters('cosmosApi'),'MongoDB'),'MongoDB', if(equals(parameters('cosmosApi'),'Cassandra'),'Cassandra', if(equals(parameters('cosmosApi'),'Gremlin'),'Gremlin','Table'))))]",
+            "cosmosDnsZone": "[if(equals(parameters('cosmosApi'),'NoSQL'),'privatelink.documents.azure.com', if(equals(parameters('cosmosApi'),'MongoDB'),'privatelink.mongo.cosmos.azure.com', if(equals(parameters('cosmosApi'),'Cassandra'),'privatelink.cassandra.cosmos.azure.com', if(equals(parameters('cosmosApi'),'Gremlin'),'privatelink.gremlin.cosmos.azure.com','privatelink.table.cosmos.azure.com'))))]"
           },
           "resources": [
 
@@ -620,7 +636,7 @@
               "name": "[variables('cosmosName')]",
               "location": "[variables('locCosmos')]",
               "tags": "[parameters('tags')]",
-              "kind": "GlobalDocumentDB",
+              "kind": "[variables('cosmosKind')]",
               "identity": { "type": "SystemAssigned" },
               "properties": {
                 "databaseAccountOfferType": "Standard",
@@ -631,7 +647,8 @@
                 "publicNetworkAccess": "Disabled",
                 "disableLocalAuth": false,
                 "minimalTlsVersion": "Tls12",
-                "capabilities": []
+                "capabilities": "[variables('cosmosCapabilities')]",
+                "apiProperties": "[if(equals(parameters('cosmosApi'),'MongoDB'), createObject('serverVersion','7.0'), null())]"
               }
             },
 
@@ -823,7 +840,7 @@
                     "name": "cosmos",
                     "properties": {
                       "privateLinkServiceId": "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName'))]",
-                      "groupIds": [ "Sql" ]
+                      "groupIds": [ "[variables('cosmosPeGroupId')]" ]
                     }
                   }
                 ]
@@ -836,12 +853,12 @@
               "name": "[format('pe-{0}/default', variables('cosmosName'))]",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('cosmosName')))]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.documents.azure.com')]",
-                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.documents.azure.com', format('link-{0}', variables('vnetName')))]"
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('cosmosDnsZone'))]",
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', variables('cosmosDnsZone'), format('link-{0}', variables('vnetName')))]"
               ],
               "properties": {
                 "privateDnsZoneConfigs": [
-                  { "name": "cosmos", "properties": { "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.documents.azure.com')]" } }
+                  { "name": "cosmos", "properties": { "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('cosmosDnsZone'))]" } }
                 ]
               }
             },

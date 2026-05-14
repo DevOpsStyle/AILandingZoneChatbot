@@ -32,6 +32,7 @@
     "apimPublisherEmail":  { "value": "admin@contoso.com" },
     "apimPublisherName":   { "value": "Contoso" },
     "apimSku":             { "value": "StandardV2" },
+    "cosmosApi":           { "value": "NoSQL" },
 
     "enableComponents": {
       "value": {
