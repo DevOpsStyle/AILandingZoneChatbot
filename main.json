@@ -923,114 +923,146 @@
             },
 
             {
-              "condition": "[variables('diagFoundry')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', variables('foundryName'))]",
-              "name": "diag-foundry",
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2024-03-01",
+              "name": "diagnostics-apply",
               "dependsOn": [
-                "[resourceId('Microsoft.CognitiveServices/accounts', variables('foundryName'))]",
-                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
+                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('foundryName')), 'default')]",
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('searchName')), 'default')]",
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('apimName')), 'default')]",
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('cosmosName')), 'default')]",
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('sbName')), 'default')]",
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('redisName')), 'default')]",
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('kvName')), 'default')]",
+                "[resourceId('Microsoft.Resources/deployments', 'foundry-models-deploy')]"
               ],
               "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
-                "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
-                "metrics": [ { "category": "AllMetrics", "enabled": true } ]
-              }
-            },
-            {
-              "condition": "[variables('diagSearch')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Search/searchServices/{0}', variables('searchName'))]",
-              "name": "diag-search",
-              "dependsOn": [
-                "[resourceId('Microsoft.Search/searchServices', variables('searchName'))]",
-                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
-              ],
-              "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
-                "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
-                "metrics": [ { "category": "AllMetrics", "enabled": true } ]
-              }
-            },
-            {
-              "condition": "[variables('diagApim')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.ApiManagement/service/{0}', variables('apimName'))]",
-              "name": "diag-apim",
-              "dependsOn": [
-                "[resourceId('Microsoft.ApiManagement/service', variables('apimName'))]",
-                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
-              ],
-              "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
-                "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
-                "metrics": [ { "category": "AllMetrics", "enabled": true } ]
-              }
-            },
-            {
-              "condition": "[variables('diagCosmos')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.DocumentDB/databaseAccounts/{0}', variables('cosmosName'))]",
-              "name": "diag-cosmos",
-              "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosName'))]",
-                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
-              ],
-              "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
-                "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
-                "metrics": [ { "category": "Requests", "enabled": true } ]
-              }
-            },
-            {
-              "condition": "[variables('diagSb')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.ServiceBus/namespaces/{0}', variables('sbName'))]",
-              "name": "diag-sb",
-              "dependsOn": [
-                "[resourceId('Microsoft.ServiceBus/namespaces', variables('sbName'))]",
-                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
-              ],
-              "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
-                "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
-                "metrics": [ { "category": "AllMetrics", "enabled": true } ]
-              }
-            },
-            {
-              "condition": "[variables('diagRedis')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Cache/redisEnterprise/{0}', variables('redisName'))]",
-              "name": "diag-redis",
-              "dependsOn": [
-                "[resourceId('Microsoft.Cache/redisEnterprise', variables('redisName'))]",
-                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
-              ],
-              "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
-                "metrics": [ { "category": "AllMetrics", "enabled": true } ]
-              }
-            },
-            {
-              "condition": "[variables('diagKv')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('kvName'))]",
-              "name": "diag-kv",
-              "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults', variables('kvName'))]",
-                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
-              ],
-              "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
-                "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
-                "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+                "mode": "Incremental",
+                "expressionEvaluationOptions": { "scope": "inner" },
+                "parameters": {
+                  "lawId":       { "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]" },
+                  "foundryName": { "value": "[variables('foundryName')]" },
+                  "searchName":  { "value": "[variables('searchName')]" },
+                  "apimName":    { "value": "[variables('apimName')]" },
+                  "cosmosName":  { "value": "[variables('cosmosName')]" },
+                  "sbName":      { "value": "[variables('sbName')]" },
+                  "redisName":   { "value": "[variables('redisName')]" },
+                  "kvName":      { "value": "[variables('kvName')]" },
+                  "diagFoundry": { "value": "[variables('diagFoundry')]" },
+                  "diagSearch":  { "value": "[variables('diagSearch')]" },
+                  "diagApim":    { "value": "[variables('diagApim')]" },
+                  "diagCosmos":  { "value": "[variables('diagCosmos')]" },
+                  "diagSb":      { "value": "[variables('diagSb')]" },
+                  "diagRedis":   { "value": "[variables('diagRedis')]" },
+                  "diagKv":      { "value": "[variables('diagKv')]" }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "parameters": {
+                    "lawId":       { "type": "string" },
+                    "foundryName": { "type": "string" },
+                    "searchName":  { "type": "string" },
+                    "apimName":    { "type": "string" },
+                    "cosmosName":  { "type": "string" },
+                    "sbName":      { "type": "string" },
+                    "redisName":   { "type": "string" },
+                    "kvName":      { "type": "string" },
+                    "diagFoundry": { "type": "bool" },
+                    "diagSearch":  { "type": "bool" },
+                    "diagApim":    { "type": "bool" },
+                    "diagCosmos":  { "type": "bool" },
+                    "diagSb":      { "type": "bool" },
+                    "diagRedis":   { "type": "bool" },
+                    "diagKv":      { "type": "bool" }
+                  },
+                  "resources": [
+                    {
+                      "condition": "[parameters('diagFoundry')]",
+                      "type": "Microsoft.Insights/diagnosticSettings",
+                      "apiVersion": "2021-05-01-preview",
+                      "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('foundryName'))]",
+                      "name": "diag-foundry",
+                      "properties": {
+                        "workspaceId": "[parameters('lawId')]",
+                        "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
+                        "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+                      }
+                    },
+                    {
+                      "condition": "[parameters('diagSearch')]",
+                      "type": "Microsoft.Insights/diagnosticSettings",
+                      "apiVersion": "2021-05-01-preview",
+                      "scope": "[format('Microsoft.Search/searchServices/{0}', parameters('searchName'))]",
+                      "name": "diag-search",
+                      "properties": {
+                        "workspaceId": "[parameters('lawId')]",
+                        "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
+                        "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+                      }
+                    },
+                    {
+                      "condition": "[parameters('diagApim')]",
+                      "type": "Microsoft.Insights/diagnosticSettings",
+                      "apiVersion": "2021-05-01-preview",
+                      "scope": "[format('Microsoft.ApiManagement/service/{0}', parameters('apimName'))]",
+                      "name": "diag-apim",
+                      "properties": {
+                        "workspaceId": "[parameters('lawId')]",
+                        "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
+                        "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+                      }
+                    },
+                    {
+                      "condition": "[parameters('diagCosmos')]",
+                      "type": "Microsoft.Insights/diagnosticSettings",
+                      "apiVersion": "2021-05-01-preview",
+                      "scope": "[format('Microsoft.DocumentDB/databaseAccounts/{0}', parameters('cosmosName'))]",
+                      "name": "diag-cosmos",
+                      "properties": {
+                        "workspaceId": "[parameters('lawId')]",
+                        "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
+                        "metrics": [ { "category": "Requests", "enabled": true } ]
+                      }
+                    },
+                    {
+                      "condition": "[parameters('diagSb')]",
+                      "type": "Microsoft.Insights/diagnosticSettings",
+                      "apiVersion": "2021-05-01-preview",
+                      "scope": "[format('Microsoft.ServiceBus/namespaces/{0}', parameters('sbName'))]",
+                      "name": "diag-sb",
+                      "properties": {
+                        "workspaceId": "[parameters('lawId')]",
+                        "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
+                        "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+                      }
+                    },
+                    {
+                      "condition": "[parameters('diagRedis')]",
+                      "type": "Microsoft.Insights/diagnosticSettings",
+                      "apiVersion": "2021-05-01-preview",
+                      "scope": "[format('Microsoft.Cache/redisEnterprise/{0}', parameters('redisName'))]",
+                      "name": "diag-redis",
+                      "properties": {
+                        "workspaceId": "[parameters('lawId')]",
+                        "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+                      }
+                    },
+                    {
+                      "condition": "[parameters('diagKv')]",
+                      "type": "Microsoft.Insights/diagnosticSettings",
+                      "apiVersion": "2021-05-01-preview",
+                      "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('kvName'))]",
+                      "name": "diag-kv",
+                      "properties": {
+                        "workspaceId": "[parameters('lawId')]",
+                        "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
+                        "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+                      }
+                    }
+                  ]
+                }
               }
             },
             {
@@ -1040,7 +1072,8 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('foundryName')), 'default')]",
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('apimName')), 'default')]",
-                "[resourceId('Microsoft.Resources/deployments', 'foundry-models-deploy')]"
+                "[resourceId('Microsoft.Resources/deployments', 'foundry-models-deploy')]",
+                "[resourceId('Microsoft.Resources/deployments', 'diagnostics-apply')]"
               ],
               "properties": {
                 "mode": "Incremental",
