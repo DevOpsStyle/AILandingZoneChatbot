@@ -30,6 +30,7 @@
     },
     "apimPublisherEmail":  { "value": "admin@contoso.com" },
     "apimPublisherName":   { "value": "Contoso" },
+    "apimSku":             { "value": "StandardV2" },
 
     "enableDiagnostics":   { "value": true },
     "diagnosticsPerResource": {

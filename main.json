@@ -76,6 +76,12 @@
       "type": "string",
       "defaultValue": "Contoso"
     },
+    "apimSku": {
+      "type": "string",
+      "defaultValue": "StandardV2",
+      "allowedValues": [ "StandardV2", "PremiumV2" ],
+      "metadata": { "description": "SKU APIM. StandardV2: hardening post-creazione (publicNetworkAccess viene disabilitato dopo il PE). PremiumV2: creazione direttamente con publicNetworkAccess=Disabled." }
+    },
     "enableDiagnostics": {
       "type": "bool",
       "defaultValue": true,
@@ -241,6 +247,7 @@
           "models": { "value": "[parameters('models')]" },
           "apimPublisherEmail": { "value": "[parameters('apimPublisherEmail')]" },
           "apimPublisherName": { "value": "[parameters('apimPublisherName')]" },
+          "apimSku": { "value": "[parameters('apimSku')]" },
           "enableDiagnostics": { "value": "[parameters('enableDiagnostics')]" },
           "diagnosticsPerResource": { "value": "[parameters('diagnosticsPerResource')]" },
           "tags": { "value": "[parameters('tags')]" }
@@ -258,6 +265,7 @@
             "models": { "type": "array" },
             "apimPublisherEmail": { "type": "string" },
             "apimPublisherName": { "type": "string" },
+            "apimSku": { "type": "string" },
             "enableDiagnostics": { "type": "bool" },
             "diagnosticsPerResource": { "type": "object" },
             "tags": { "type": "object" }
@@ -508,12 +516,12 @@
               "name": "[variables('apimName')]",
               "location": "[variables('locApim')]",
               "tags": "[parameters('tags')]",
-              "sku": { "name": "StandardV2", "capacity": 1 },
+              "sku": { "name": "[parameters('apimSku')]", "capacity": 1 },
               "identity": { "type": "SystemAssigned" },
               "properties": {
                 "publisherEmail": "[parameters('apimPublisherEmail')]",
                 "publisherName": "[parameters('apimPublisherName')]",
-                "publicNetworkAccess": "Enabled",
+                "publicNetworkAccess": "[if(equals(parameters('apimSku'), 'PremiumV2'), 'Disabled', 'Enabled')]",
                 "virtualNetworkType": "None"
               }
             },
@@ -998,6 +1006,7 @@
                 "parameters": {
                   "foundryName":   { "value": "[variables('foundryName')]" },
                   "apimName":      { "value": "[variables('apimName')]" },
+                  "apimSku":       { "value": "[parameters('apimSku')]" },
                   "locFoundry":    { "value": "[variables('locFoundry')]" },
                   "locApim":       { "value": "[variables('locApim')]" },
                   "tags":          { "value": "[parameters('tags')]" },
@@ -1010,6 +1019,7 @@
                   "parameters": {
                     "foundryName":    { "type": "string" },
                     "apimName":       { "type": "string" },
+                    "apimSku":        { "type": "string" },
                     "locFoundry":     { "type": "string" },
                     "locApim":        { "type": "string" },
                     "tags":           { "type": "object" },
@@ -1034,12 +1044,13 @@
                       }
                     },
                     {
+                      "condition": "[equals(parameters('apimSku'), 'StandardV2')]",
                       "type": "Microsoft.ApiManagement/service",
                       "apiVersion": "2024-05-01",
                       "name": "[parameters('apimName')]",
                       "location": "[parameters('locApim')]",
                       "tags": "[parameters('tags')]",
-                      "sku": { "name": "StandardV2", "capacity": 1 },
+                      "sku": { "name": "[parameters('apimSku')]", "capacity": 1 },
                       "identity": { "type": "SystemAssigned" },
                       "properties": {
                         "publisherEmail": "[parameters('publisherEmail')]",

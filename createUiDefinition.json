@@ -184,7 +184,9 @@
         "label": "API Management",
         "elements": [
           { "name": "apimPublisherEmail", "type": "Microsoft.Common.TextBox", "label": "Publisher email", "defaultValue": "admin@contoso.com", "constraints": { "required": true, "regex": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", "validationMessage": "Email non valida." } },
-          { "name": "apimPublisherName",  "type": "Microsoft.Common.TextBox", "label": "Publisher name",  "defaultValue": "Contoso", "constraints": { "required": true } }
+          { "name": "apimPublisherName",  "type": "Microsoft.Common.TextBox", "label": "Publisher name",  "defaultValue": "Contoso", "constraints": { "required": true } },
+          { "name": "apimSku", "type": "Microsoft.Common.DropDown", "label": "SKU APIM", "defaultValue": "StandardV2 (più economica, hardening post-creazione)", "constraints": { "required": true, "allowedValues": [ { "label": "StandardV2 (più economica, hardening post-creazione)", "value": "StandardV2" }, { "label": "PremiumV2 (private-only nativo, più costosa)", "value": "PremiumV2" } ] } },
+          { "name": "apimSkuInfo", "type": "Microsoft.Common.InfoBox", "visible": true, "options": { "icon": "Info", "text": "**StandardV2**: APIM viene creato con accesso pubblico abilitato e poi disabilitato (hardening) automaticamente dopo che il Private Endpoint è pronto. **PremiumV2**: APIM viene creato direttamente con `publicNetworkAccess: Disabled` (richiede SKU Premium V2)." } }
         ]
       },
       {
@@ -244,6 +246,7 @@
       "models": "[take(parse(concat('[{\"deploymentName\":\"', steps('ai').model1Section.deploymentName, '\",\"modelName\":\"', steps('ai').model1Section.modelName, '\",\"format\":\"', steps('ai').model1Section.format, '\",\"version\":\"', steps('ai').model1Section.version, '\",\"skuName\":\"', steps('ai').model1Section.skuName, '\",\"capacity\":', string(int(steps('ai').model1Section.capacity)), '},{\"deploymentName\":\"', steps('ai').model2Section.deploymentName, '\",\"modelName\":\"', steps('ai').model2Section.modelName, '\",\"format\":\"', steps('ai').model2Section.format, '\",\"version\":\"', steps('ai').model2Section.version, '\",\"skuName\":\"', steps('ai').model2Section.skuName, '\",\"capacity\":', string(int(steps('ai').model2Section.capacity)), '},{\"deploymentName\":\"', steps('ai').model3Section.deploymentName, '\",\"modelName\":\"', steps('ai').model3Section.modelName, '\",\"format\":\"', steps('ai').model3Section.format, '\",\"version\":\"', steps('ai').model3Section.version, '\",\"skuName\":\"', steps('ai').model3Section.skuName, '\",\"capacity\":', string(int(steps('ai').model3Section.capacity)), '}]')), int(steps('ai').modelCount))]",
       "apimPublisherEmail":       "[steps('apim').apimPublisherEmail]",
       "apimPublisherName":        "[steps('apim').apimPublisherName]",
+      "apimSku":                  "[steps('apim').apimSku]",
       "locations": {
         "network":      "[if(equals(steps('regions').locNetwork,      'default'), '', steps('regions').locNetwork)]",
         "logAnalytics": "[if(equals(steps('regions').locLogAnalytics, 'default'), '', steps('regions').locLogAnalytics)]",
