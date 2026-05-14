@@ -93,6 +93,18 @@
       "allowedValues": [ "StandardV2", "PremiumV2" ],
       "metadata": { "description": "SKU APIM. StandardV2: hardening post-creazione (publicNetworkAccess viene disabilitato dopo il PE). PremiumV2: creazione direttamente con publicNetworkAccess=Disabled." }
     },
+    "enableComponents": {
+      "type": "object",
+      "defaultValue": {
+        "keyVault": true,
+        "aiSearch": true,
+        "apim": true,
+        "cosmos": true,
+        "serviceBus": true,
+        "redis": true
+      },
+      "metadata": { "description": "Toggle per ogni componente opzionale. AI Foundry, VNet, NSG, DNS zones e Log Analytics sono sempre creati. Mettere a false un componente disabilita anche il suo Private Endpoint, DNS zone group, diagnostic setting e (per APIM) i backend dei modelli." }
+    },
     "enableDiagnostics": {
       "type": "bool",
       "defaultValue": true,
@@ -261,6 +273,7 @@
           "apimPublisherEmail": { "value": "[parameters('apimPublisherEmail')]" },
           "apimPublisherName": { "value": "[parameters('apimPublisherName')]" },
           "apimSku": { "value": "[parameters('apimSku')]" },
+          "enableComponents": { "value": "[parameters('enableComponents')]" },
           "enableDiagnostics": { "value": "[parameters('enableDiagnostics')]" },
           "diagnosticsPerResource": { "value": "[parameters('diagnosticsPerResource')]" },
           "tags": { "value": "[parameters('tags')]" }
@@ -281,6 +294,7 @@
             "apimPublisherEmail": { "type": "string" },
             "apimPublisherName": { "type": "string" },
             "apimSku": { "type": "string" },
+            "enableComponents": { "type": "object" },
             "enableDiagnostics": { "type": "bool" },
             "diagnosticsPerResource": { "type": "object" },
             "tags": { "type": "object" }
@@ -321,12 +335,18 @@
               "privatelink.vaultcore.azure.net"
             ],
             "diagFoundry": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').foundry))]",
-            "diagSearch": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').search))]",
-            "diagApim": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').apim))]",
-            "diagCosmos": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').cosmos))]",
-            "diagSb": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').serviceBus))]",
-            "diagRedis": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').redis))]",
-            "diagKv": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').keyVault))]"
+            "diagSearch": "[and(and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').search)), bool(parameters('enableComponents').aiSearch))]",
+            "diagApim": "[and(and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').apim)), bool(parameters('enableComponents').apim))]",
+            "diagCosmos": "[and(and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').cosmos)), bool(parameters('enableComponents').cosmos))]",
+            "diagSb": "[and(and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').serviceBus)), bool(parameters('enableComponents').serviceBus))]",
+            "diagRedis": "[and(and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').redis)), bool(parameters('enableComponents').redis))]",
+            "diagKv": "[and(and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').keyVault)), bool(parameters('enableComponents').keyVault))]",
+            "enableKv":     "[bool(parameters('enableComponents').keyVault)]",
+            "enableSearch": "[bool(parameters('enableComponents').aiSearch)]",
+            "enableApim":   "[bool(parameters('enableComponents').apim)]",
+            "enableCosmos": "[bool(parameters('enableComponents').cosmos)]",
+            "enableSb":     "[bool(parameters('enableComponents').serviceBus)]",
+            "enableRedis":  "[bool(parameters('enableComponents').redis)]"
           },
           "resources": [
 
@@ -448,6 +468,7 @@
             },
 
             {
+              "condition": "[variables('enableKv')]",
               "type": "Microsoft.KeyVault/vaults",
               "apiVersion": "2024-04-01-preview",
               "name": "[variables('kvName')]",
@@ -534,6 +555,7 @@
             },
 
             {
+              "condition": "[variables('enableSearch')]",
               "type": "Microsoft.Search/searchServices",
               "apiVersion": "2024-06-01-preview",
               "name": "[variables('searchName')]",
@@ -552,6 +574,7 @@
             },
 
             {
+              "condition": "[variables('enableApim')]",
               "type": "Microsoft.ApiManagement/service",
               "apiVersion": "2024-05-01",
               "name": "[variables('apimName')]",
@@ -568,7 +591,7 @@
             },
 
             {
-              "condition": "[greater(length(parameters('models')), 0)]",
+              "condition": "[and(variables('enableApim'), greater(length(parameters('models')), 0))]",
               "type": "Microsoft.ApiManagement/service/backends",
               "apiVersion": "2024-05-01",
               "name": "[format('{0}/aoai-{1}', variables('apimName'), parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]",
@@ -591,6 +614,7 @@
             },
 
             {
+              "condition": "[variables('enableCosmos')]",
               "type": "Microsoft.DocumentDB/databaseAccounts",
               "apiVersion": "2024-08-15",
               "name": "[variables('cosmosName')]",
@@ -612,6 +636,7 @@
             },
 
             {
+              "condition": "[variables('enableSb')]",
               "type": "Microsoft.ServiceBus/namespaces",
               "apiVersion": "2024-01-01",
               "name": "[variables('sbName')]",
@@ -628,6 +653,7 @@
             },
 
             {
+              "condition": "[variables('enableRedis')]",
               "type": "Microsoft.Cache/redisEnterprise",
               "apiVersion": "2024-10-01",
               "name": "[variables('redisName')]",
@@ -637,6 +663,7 @@
               "properties": { "minimumTlsVersion": "1.2" }
             },
             {
+              "condition": "[variables('enableRedis')]",
               "type": "Microsoft.Cache/redisEnterprise/databases",
               "apiVersion": "2024-10-01",
               "name": "[format('{0}/default', variables('redisName'))]",
@@ -694,6 +721,7 @@
             },
 
             {
+              "condition": "[variables('enableSearch')]",
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}', variables('searchName'))]",
@@ -717,6 +745,7 @@
               }
             },
             {
+              "condition": "[variables('enableSearch')]",
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}/default', variables('searchName'))]",
@@ -732,6 +761,7 @@
             },
 
             {
+              "condition": "[variables('enableApim')]",
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}', variables('apimName'))]",
@@ -755,6 +785,7 @@
               }
             },
             {
+              "condition": "[variables('enableApim')]",
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}/default', variables('apimName'))]",
@@ -770,6 +801,7 @@
             },
 
             {
+              "condition": "[variables('enableCosmos')]",
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}', variables('cosmosName'))]",
@@ -793,6 +825,7 @@
               }
             },
             {
+              "condition": "[variables('enableCosmos')]",
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}/default', variables('cosmosName'))]",
@@ -808,6 +841,7 @@
             },
 
             {
+              "condition": "[variables('enableSb')]",
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}', variables('sbName'))]",
@@ -831,6 +865,7 @@
               }
             },
             {
+              "condition": "[variables('enableSb')]",
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}/default', variables('sbName'))]",
@@ -846,6 +881,7 @@
             },
 
             {
+              "condition": "[variables('enableRedis')]",
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}', variables('redisName'))]",
@@ -870,6 +906,7 @@
               }
             },
             {
+              "condition": "[variables('enableRedis')]",
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}/default', variables('redisName'))]",
@@ -885,6 +922,7 @@
             },
 
             {
+              "condition": "[variables('enableKv')]",
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}', variables('kvName'))]",
@@ -908,6 +946,7 @@
               }
             },
             {
+              "condition": "[variables('enableKv')]",
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2024-01-01",
               "name": "[format('pe-{0}/default', variables('kvName'))]",
@@ -1082,6 +1121,7 @@
                   "foundryName":   { "value": "[variables('foundryName')]" },
                   "apimName":      { "value": "[variables('apimName')]" },
                   "apimSku":       { "value": "[parameters('apimSku')]" },
+                  "enableApim":    { "value": "[variables('enableApim')]" },
                   "locFoundry":    { "value": "[variables('locFoundry')]" },
                   "locApim":       { "value": "[variables('locApim')]" },
                   "tags":          { "value": "[parameters('tags')]" },
@@ -1095,6 +1135,7 @@
                     "foundryName":    { "type": "string" },
                     "apimName":       { "type": "string" },
                     "apimSku":        { "type": "string" },
+                    "enableApim":     { "type": "bool" },
                     "locFoundry":     { "type": "string" },
                     "locApim":        { "type": "string" },
                     "tags":           { "type": "object" },
@@ -1119,6 +1160,7 @@
                       }
                     },
                     {
+                      "condition": "[parameters('enableApim')]",
                       "type": "Microsoft.ApiManagement/service",
                       "apiVersion": "2024-05-01",
                       "name": "[parameters('apimName')]",

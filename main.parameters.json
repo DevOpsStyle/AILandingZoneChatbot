@@ -33,6 +33,17 @@
     "apimPublisherName":   { "value": "Contoso" },
     "apimSku":             { "value": "StandardV2" },
 
+    "enableComponents": {
+      "value": {
+        "keyVault":   true,
+        "aiSearch":   true,
+        "apim":       true,
+        "cosmos":     true,
+        "serviceBus": true,
+        "redis":      true
+      }
+    },
+
     "enableDiagnostics":   { "value": true },
     "diagnosticsPerResource": {
       "value": {

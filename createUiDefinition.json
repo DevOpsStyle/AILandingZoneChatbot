@@ -135,6 +135,19 @@
         ]
       },
       {
+        "name": "components",
+        "label": "Componenti da deployare",
+        "elements": [
+          { "name": "info", "type": "Microsoft.Common.InfoBox", "visible": true, "options": { "icon": "Info", "text": "Scegli quali componenti deployare. **AI Foundry, VNet, NSG, Private DNS Zones e Log Analytics sono sempre creati**. Disabilitando un componente, vengono saltati anche il suo Private Endpoint, DNS zone group e diagnostic setting. Se disabiliti APIM, non vengono creati nemmeno i backend dei modelli AOAI." } },
+          { "name": "enableKv",     "type": "Microsoft.Common.DropDown", "label": "Key Vault",            "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "enableSearch", "type": "Microsoft.Common.DropDown", "label": "Azure AI Search",       "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "enableApim",   "type": "Microsoft.Common.DropDown", "label": "API Management",        "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "enableCosmos", "type": "Microsoft.Common.DropDown", "label": "Cosmos DB (NoSQL)",      "defaultValue": "True", "toolTip": "Cosmos DB è il nome attuale di quello che storicamente era chiamato 'DocumentDB'. Il provider ARM è Microsoft.DocumentDB ma il prodotto è Azure Cosmos DB for NoSQL.", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "enableSb",     "type": "Microsoft.Common.DropDown", "label": "Service Bus (Premium)",  "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } },
+          { "name": "enableRedis",  "type": "Microsoft.Common.DropDown", "label": "Azure Managed Redis",   "defaultValue": "True", "constraints": { "required": true, "allowedValues": [ { "label": "True", "value": "true" }, { "label": "False", "value": "false" } ] } }
+        ]
+      },
+      {
         "name": "network",
         "label": "Networking",
         "elements": [
@@ -269,6 +282,14 @@
       "apimPublisherEmail":       "[steps('apim').apimPublisherEmail]",
       "apimPublisherName":        "[steps('apim').apimPublisherName]",
       "apimSku":                  "[steps('apim').apimSku]",
+      "enableComponents": {
+        "keyVault":   "[equals(steps('components').enableKv, 'true')]",
+        "aiSearch":   "[equals(steps('components').enableSearch, 'true')]",
+        "apim":       "[equals(steps('components').enableApim, 'true')]",
+        "cosmos":     "[equals(steps('components').enableCosmos, 'true')]",
+        "serviceBus": "[equals(steps('components').enableSb, 'true')]",
+        "redis":      "[equals(steps('components').enableRedis, 'true')]"
+      },
       "locations": {
         "network":      "[if(equals(steps('regions').locNetwork,      'default'), '', steps('regions').locNetwork)]",
         "logAnalytics": "[if(equals(steps('regions').locLogAnalytics, 'default'), '', steps('regions').locLogAnalytics)]",
