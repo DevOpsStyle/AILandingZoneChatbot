@@ -207,9 +207,7 @@
               "type": "Microsoft.Security/pricings",
               "apiVersion": "2024-01-01",
               "name": "[variables('planNames')[copyIndex()]]",
-              "properties": {
-                "pricingTier": "Standard"
-              },
+              "properties": "[if(equals(variables('planNames')[copyIndex()], 'Api'), createObject('pricingTier', 'Standard', 'subPlan', 'P1'), createObject('pricingTier', 'Standard'))]",
               "copy": {
                 "name": "defenderLoop",
                 "count": "[length(variables('planNames'))]",
