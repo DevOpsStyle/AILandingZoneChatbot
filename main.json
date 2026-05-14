@@ -177,7 +177,7 @@
       "condition": "[parameters('enableDefender')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2024-03-01",
-      "name": "[format('defenderPlans-{0}', parameters('location'))]",
+      "name": "[format('defenderPlans-{0}-{1}', variables('namePrefix'), parameters('location'))]",
       "location": "[parameters('location')]",
       "properties": {
         "mode": "Incremental",
