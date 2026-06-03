@@ -32,6 +32,10 @@
     "vnetWorkloadAddressPrefix": { "value": "10.30.0.0/16" },
     "subnetPePrefix":            { "value": "10.30.1.0/24" },
     "subnetAcaPrefix":           { "value": "10.30.4.0/23" },
+    "appGwSku":                  { "value": "WAF_v2" },
+    "appGwMinCapacity":          { "value": 0 },
+    "appGwMaxCapacity":          { "value": 2 },
+    "wafMode":                   { "value": "Prevention" },
     "models": {
       "value": [
         { "deploymentName": "gpt-5-mini", "modelName": "gpt-5-mini", "format": "OpenAI", "version": "2025-08-07", "skuName": "GlobalStandard", "capacity": 50 }
@@ -51,12 +55,16 @@
 
     "enableComponents": {
       "value": {
-        "keyVault":   true,
-        "aiSearch":   true,
-        "apim":       true,
-        "cosmos":     true,
-        "serviceBus": true,
-        "redis":      true
+        "keyVault":     true,
+        "aiSearch":     true,
+        "apim":         true,
+        "cosmos":       true,
+        "serviceBus":   true,
+        "redis":        true,
+        "appGateway":   true,
+        "acr":          true,
+        "containerApp": true,
+        "appInsights":  true
       }
     },
 

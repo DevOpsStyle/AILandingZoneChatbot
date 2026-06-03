@@ -113,6 +113,32 @@
       "defaultValue": "10.30.4.0/23",
       "metadata": { "description": "Subnet Container Apps Environment (richiesto minimo /23 per workload profiles)." }
     },
+    "appGwSku": {
+      "type": "string",
+      "defaultValue": "WAF_v2",
+      "allowedValues": [ "WAF_v2", "Standard_v2" ],
+      "metadata": { "description": "Application Gateway SKU. WAF_v2 (default) include WAF policy; Standard_v2 senza WAF." }
+    },
+    "appGwMinCapacity": {
+      "type": "int",
+      "defaultValue": 0,
+      "minValue": 0,
+      "maxValue": 125,
+      "metadata": { "description": "Autoscale min capacity (0 = scale-to-zero non-burst)." }
+    },
+    "appGwMaxCapacity": {
+      "type": "int",
+      "defaultValue": 2,
+      "minValue": 1,
+      "maxValue": 125,
+      "metadata": { "description": "Autoscale max capacity." }
+    },
+    "wafMode": {
+      "type": "string",
+      "defaultValue": "Prevention",
+      "allowedValues": [ "Detection", "Prevention" ],
+      "metadata": { "description": "WAF Policy mode (solo se appGwSku=WAF_v2)." }
+    },
     "models": {
       "type": "array",
       "defaultValue": [
@@ -193,9 +219,13 @@
         "apim": true,
         "cosmos": true,
         "serviceBus": true,
-        "redis": true
+        "redis": true,
+        "appGateway": true,
+        "acr": true,
+        "containerApp": true,
+        "appInsights": true
       },
-      "metadata": { "description": "Toggle per ogni componente opzionale. AI Foundry, VNet, NSG, DNS zones e Log Analytics sono sempre creati. Mettere a false un componente disabilita anche il suo Private Endpoint, DNS zone group, diagnostic setting e (per APIM) i backend dei modelli." }
+      "metadata": { "description": "Toggle per ogni componente opzionale. AI Foundry, VNet, DNS zones e Log Analytics sono sempre creati. Mettere a false un componente disabilita anche il suo Private Endpoint, DNS zone group, diagnostic setting e (per APIM) i backend dei modelli. appGateway/acr/containerApp/appInsights gestiscono i nuovi componenti edge e workload (App Gateway WAF nel hub; ACR, Container Apps Environment+app, Application Insights nel workload)." }
     },
     "enableDiagnostics": {
       "type": "bool",
@@ -755,6 +785,10 @@
             "redisName": "[format('{0}-redis-{1}', parameters('namePrefix'), variables('uniq'))]",
             "kvName": "[format('{0}kv{1}', parameters('namePrefix'), variables('uniq'))]",
             "nsgName": "[format('{0}-nsg-apim', parameters('namePrefix'))]",
+            "acrName": "[format('{0}acr{1}', parameters('namePrefix'), variables('uniq'))]",
+            "acaEnvName": "[format('{0}-acaenv-{1}', parameters('namePrefix'), variables('uniq'))]",
+            "acaAppName": "[format('{0}-aca-chatbot', parameters('namePrefix'))]",
+            "appInsName": "[format('{0}-appins-{1}', parameters('namePrefix'), variables('uniq'))]",
             "dnsZones": [
               "privatelink.cognitiveservices.azure.com",
               "privatelink.openai.azure.com",
@@ -768,7 +802,8 @@
               "privatelink.table.cosmos.azure.com",
               "privatelink.servicebus.windows.net",
               "privatelink.redis.azure.net",
-              "privatelink.vaultcore.azure.net"
+              "privatelink.vaultcore.azure.net",
+              "privatelink.azurecr.io"
             ],
             "diagFoundry": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').foundry))]",
             "diagSearch": "[and(and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').search)), bool(parameters('enableComponents').aiSearch))]",
@@ -783,6 +818,9 @@
             "enableCosmos": "[bool(parameters('enableComponents').cosmos)]",
             "enableSb":     "[bool(parameters('enableComponents').serviceBus)]",
             "enableRedis":  "[bool(parameters('enableComponents').redis)]",
+            "enableAcr":    "[bool(parameters('enableComponents').acr)]",
+            "enableAca":    "[bool(parameters('enableComponents').containerApp)]",
+            "enableAppIns": "[bool(parameters('enableComponents').appInsights)]",
             "cosmosKind": "[if(equals(parameters('cosmosApi'),'MongoDB'),'MongoDB','GlobalDocumentDB')]",
             "cosmosCapApi": "[if(equals(parameters('cosmosApi'),'Cassandra'), createArray(createObject('name','EnableCassandra')), if(equals(parameters('cosmosApi'),'Gremlin'), createArray(createObject('name','EnableGremlin')), if(equals(parameters('cosmosApi'),'Table'), createArray(createObject('name','EnableTable')), createArray())))]",
             "cosmosCapServerless": "[if(equals(parameters('cosmosCapacityMode'),'Serverless'), createArray(createObject('name','EnableServerless')), createArray())]",
@@ -1459,6 +1497,149 @@
                   ]
                 }
               }
+            },
+
+            {
+              "condition": "[variables('enableAppIns')]",
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[variables('appInsName')]",
+              "location": "[variables('locLaw')]",
+              "tags": "[parameters('tags')]",
+              "kind": "web",
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
+              ],
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+              }
+            },
+
+            {
+              "condition": "[variables('enableAcr')]",
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-11-01-preview",
+              "name": "[variables('acrName')]",
+              "location": "[variables('locNetwork')]",
+              "tags": "[parameters('tags')]",
+              "sku": { "name": "Premium" },
+              "identity": { "type": "SystemAssigned" },
+              "properties": {
+                "adminUserEnabled": false,
+                "publicNetworkAccess": "Disabled",
+                "networkRuleBypassOptions": "AzureServices",
+                "zoneRedundancy": "Disabled",
+                "anonymousPullEnabled": false,
+                "dataEndpointEnabled": false
+              }
+            },
+
+            {
+              "condition": "[variables('enableAcr')]",
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('pe-{0}', variables('acrName'))]",
+              "location": "[variables('locNetwork')]",
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+                "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]"
+              ],
+              "properties": {
+                "subnet": { "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('peSubnetName'))]" },
+                "privateLinkServiceConnections": [ {
+                  "name": "[format('plsc-{0}', variables('acrName'))]",
+                  "properties": {
+                    "privateLinkServiceId": "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+                    "groupIds": [ "registry" ]
+                  }
+                } ]
+              }
+            },
+
+            {
+              "condition": "[variables('enableAcr')]",
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/default', format('pe-{0}', variables('acrName')))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('acrName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurecr.io')]"
+              ],
+              "properties": {
+                "privateDnsZoneConfigs": [ {
+                  "name": "acr",
+                  "properties": { "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurecr.io')]" }
+                } ]
+              }
+            },
+
+            {
+              "condition": "[variables('enableAca')]",
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2024-03-01",
+              "name": "[variables('acaEnvName')]",
+              "location": "[variables('locNetwork')]",
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]"
+              ],
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName')), '2023-09-01').customerId]",
+                    "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName')), '2023-09-01').primarySharedKey]"
+                  }
+                },
+                "vnetConfiguration": {
+                  "internal": true,
+                  "infrastructureSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('acaSubnetName'))]"
+                },
+                "workloadProfiles": [
+                  { "name": "Consumption", "workloadProfileType": "Consumption" }
+                ],
+                "zoneRedundant": false
+              }
+            },
+
+            {
+              "condition": "[variables('enableAca')]",
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[variables('acaAppName')]",
+              "location": "[variables('locNetwork')]",
+              "tags": "[parameters('tags')]",
+              "identity": { "type": "SystemAssigned" },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', variables('acaEnvName'))]"
+              ],
+              "properties": {
+                "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('acaEnvName'))]",
+                "workloadProfileName": "Consumption",
+                "configuration": {
+                  "activeRevisionsMode": "Single",
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 80,
+                    "transport": "auto",
+                    "allowInsecure": false,
+                    "traffic": [ { "weight": 100, "latestRevision": true } ]
+                  }
+                },
+                "template": {
+                  "containers": [ {
+                    "name": "chatbot",
+                    "image": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
+                    "resources": { "cpu": "[json('0.5')]", "memory": "1Gi" }
+                  } ],
+                  "scale": { "minReplicas": 0, "maxReplicas": 3 }
+                }
+              }
             }
           ],
           "outputs": {
@@ -1473,7 +1654,13 @@
             "serviceBusName": { "type": "string", "value": "[variables('sbName')]" },
             "redisName": { "type": "string", "value": "[variables('redisName')]" },
             "keyVaultName": { "type": "string", "value": "[variables('kvName')]" },
-            "modelDeployments": { "type": "array", "value": "[parameters('models')]" }
+            "modelDeployments": { "type": "array", "value": "[parameters('models')]" },
+            "acrName":             { "type": "string", "value": "[if(variables('enableAcr'), variables('acrName'), '')]" },
+            "appInsightsName":     { "type": "string", "value": "[if(variables('enableAppIns'), variables('appInsName'), '')]" },
+            "appInsightsConnStr":  { "type": "string", "value": "[if(variables('enableAppIns'), reference(resourceId('Microsoft.Insights/components', variables('appInsName')), '2020-02-02').ConnectionString, '')]" },
+            "acaEnvName":          { "type": "string", "value": "[if(variables('enableAca'), variables('acaEnvName'), '')]" },
+            "acaAppName":          { "type": "string", "value": "[if(variables('enableAca'), variables('acaAppName'), '')]" },
+            "containerAppFqdn":    { "type": "string", "value": "[if(variables('enableAca'), reference(resourceId('Microsoft.App/containerApps', variables('acaAppName')), '2024-03-01').configuration.ingress.fqdn, '')]" }
           }
         }
       }
@@ -1735,6 +1922,181 @@
       }
     },
     {
+      "condition": "[bool(parameters('enableComponents').appGateway)]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "appgw-deploy",
+      "resourceGroup": "[variables('rgHubName')]",
+      "dependsOn": [
+        "hub-deploy",
+        "workload-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "location":        { "value": "[parameters('location')]" },
+          "tags":            { "value": "[parameters('tags')]" },
+          "namePrefix":      { "value": "[variables('namePrefix')]" },
+          "vnetHubName":     { "value": "[variables('vnetHubNamePrecomputed')]" },
+          "subnetAppGwName": { "value": "snet-appgw" },
+          "appGwSku":        { "value": "[parameters('appGwSku')]" },
+          "appGwMinCapacity":{ "value": "[parameters('appGwMinCapacity')]" },
+          "appGwMaxCapacity":{ "value": "[parameters('appGwMaxCapacity')]" },
+          "wafMode":         { "value": "[parameters('wafMode')]" },
+          "backendFqdn":     { "value": "[if(bool(parameters('enableComponents').containerApp), reference('workload-deploy').outputs.containerAppFqdn.value, '')]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "location":         { "type": "string" },
+            "tags":             { "type": "object" },
+            "namePrefix":       { "type": "string" },
+            "vnetHubName":      { "type": "string" },
+            "subnetAppGwName":  { "type": "string" },
+            "appGwSku":         { "type": "string" },
+            "appGwMinCapacity": { "type": "int" },
+            "appGwMaxCapacity": { "type": "int" },
+            "wafMode":          { "type": "string" },
+            "backendFqdn":      { "type": "string" }
+          },
+          "variables": {
+            "appGwName":  "[format('{0}-appgw', parameters('namePrefix'))]",
+            "pipName":    "[format('{0}-pip-appgw', parameters('namePrefix'))]",
+            "wafPolicyName": "[format('{0}-waf-policy', parameters('namePrefix'))]",
+            "isWaf":      "[equals(parameters('appGwSku'), 'WAF_v2')]",
+            "appGwId":    "[resourceId('Microsoft.Network/applicationGateways', format('{0}-appgw', parameters('namePrefix')))]",
+            "subnetId":   "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetHubName'), parameters('subnetAppGwName'))]",
+            "pipId":      "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip-appgw', parameters('namePrefix')))]",
+            "wafPolicyId":"[resourceId('Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies', format('{0}-waf-policy', parameters('namePrefix')))]"
+          },
+          "resources": [
+            {
+              "condition": "[variables('isWaf')]",
+              "type": "Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('wafPolicyName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "policySettings": {
+                  "state": "Enabled",
+                  "mode": "[parameters('wafMode')]",
+                  "requestBodyCheck": true,
+                  "maxRequestBodySizeInKb": 128,
+                  "fileUploadLimitInMb": 100
+                },
+                "managedRules": {
+                  "managedRuleSets": [
+                    { "ruleSetType": "OWASP", "ruleSetVersion": "3.2" },
+                    { "ruleSetType": "Microsoft_BotManagerRuleSet", "ruleSetVersion": "1.0" }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('pipName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": { "name": "Standard", "tier": "Regional" },
+              "zones": [ "1", "2", "3" ],
+              "properties": {
+                "publicIPAllocationMethod": "Static",
+                "publicIPAddressVersion": "IPv4",
+                "idleTimeoutInMinutes": 4
+              }
+            },
+            {
+              "type": "Microsoft.Network/applicationGateways",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('appGwName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[variables('pipId')]"
+              ],
+              "properties": {
+                "sku": { "name": "[parameters('appGwSku')]", "tier": "[parameters('appGwSku')]" },
+                "autoscaleConfiguration": {
+                  "minCapacity": "[parameters('appGwMinCapacity')]",
+                  "maxCapacity": "[parameters('appGwMaxCapacity')]"
+                },
+                "gatewayIPConfigurations": [ {
+                  "name": "appGwIpConfig",
+                  "properties": { "subnet": { "id": "[variables('subnetId')]" } }
+                } ],
+                "frontendIPConfigurations": [ {
+                  "name": "appGwPublicFrontendIp",
+                  "properties": { "publicIPAddress": { "id": "[variables('pipId')]" } }
+                } ],
+                "frontendPorts": [ {
+                  "name": "port_80",
+                  "properties": { "port": 80 }
+                } ],
+                "backendAddressPools": [ {
+                  "name": "chatbotBackendPool",
+                  "properties": {
+                    "backendAddresses": "[if(empty(parameters('backendFqdn')), createArray(), createArray(createObject('fqdn', parameters('backendFqdn'))))]"
+                  }
+                } ],
+                "backendHttpSettingsCollection": [ {
+                  "name": "chatbotHttpSettings",
+                  "properties": {
+                    "port": 443,
+                    "protocol": "Https",
+                    "cookieBasedAffinity": "Disabled",
+                    "pickHostNameFromBackendAddress": true,
+                    "requestTimeout": 30,
+                    "probeEnabled": true,
+                    "probe": { "id": "[concat(variables('appGwId'), '/probes/chatbotProbe')]" }
+                  }
+                } ],
+                "httpListeners": [ {
+                  "name": "chatbotHttpListener",
+                  "properties": {
+                    "frontendIPConfiguration": { "id": "[concat(variables('appGwId'), '/frontendIPConfigurations/appGwPublicFrontendIp')]" },
+                    "frontendPort": { "id": "[concat(variables('appGwId'), '/frontendPorts/port_80')]" },
+                    "protocol": "Http"
+                  }
+                } ],
+                "requestRoutingRules": [ {
+                  "name": "chatbotRule",
+                  "properties": {
+                    "ruleType": "Basic",
+                    "priority": 100,
+                    "httpListener": { "id": "[concat(variables('appGwId'), '/httpListeners/chatbotHttpListener')]" },
+                    "backendAddressPool": { "id": "[concat(variables('appGwId'), '/backendAddressPools/chatbotBackendPool')]" },
+                    "backendHttpSettings": { "id": "[concat(variables('appGwId'), '/backendHttpSettingsCollection/chatbotHttpSettings')]" }
+                  }
+                } ],
+                "probes": [ {
+                  "name": "chatbotProbe",
+                  "properties": {
+                    "protocol": "Https",
+                    "path": "/",
+                    "interval": 30,
+                    "timeout": 30,
+                    "unhealthyThreshold": 3,
+                    "pickHostNameFromBackendHttpSettings": true,
+                    "match": { "statusCodes": [ "200-399" ] }
+                  }
+                } ],
+                "firewallPolicy": "[if(variables('isWaf'), createObject('id', variables('wafPolicyId')), null())]",
+                "forceFirewallPolicyAssociation": "[variables('isWaf')]"
+              }
+            }
+          ],
+          "outputs": {
+            "appGwName":   { "type": "string", "value": "[variables('appGwName')]" },
+            "publicIp":    { "type": "string", "value": "[reference(variables('pipId'), '2024-01-01').ipAddress]" }
+          }
+        }
+      }
+    },
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2024-03-01",
       "name": "dns-spoke-links-deploy",
@@ -1821,6 +2183,7 @@
     "resourceGroupHub":      { "type": "string", "value": "[variables('rgHubName')]" },
     "resourceGroupApim":     { "type": "string", "value": "[variables('rgApimName')]" },
     "resourceGroupCreated": { "type": "bool", "value": "[not(parameters('useExistingResourceGroup'))]" },
-    "workloadOutputs": { "type": "object", "value": "[reference('workload-deploy').outputs]" }
+    "workloadOutputs": { "type": "object", "value": "[reference('workload-deploy').outputs]" },
+    "appGatewayPublicIp": { "type": "string", "value": "[if(bool(parameters('enableComponents').appGateway), reference('appgw-deploy').outputs.publicIp.value, '')]" }
   }
 }
