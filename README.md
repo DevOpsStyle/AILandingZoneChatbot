@@ -7,7 +7,6 @@ Template ARM **nested** (subscription-scope) che esegue il deploy end-to-end di 
 Repo: [`DevOpsStyle/AILandingZoneChatbot`](https://github.com/DevOpsStyle/AILandingZoneChatbot) — branch `main`.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2FcreateUiDefinition.json)
-[![Deploy to Azure US Gov](https://aka.ms/deploytoazuregovbutton)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2FcreateUiDefinition.json)
 [![Visualize](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true)](https://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FDevOpsStyle%2FAILandingZoneChatbot%2Fmain%2Fmain.json)
 
 > Se usi un branch diverso da `main`, sostituisci `main` nei 3 URL sopra con il nome del branch (URL-encoded).
