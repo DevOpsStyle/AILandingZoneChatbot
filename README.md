@@ -26,6 +26,63 @@ Il portale aprirà il **wizard** definito da [createUiDefinition.json](createUiD
 
 > **Nota**: per pubblicare su GitHub i template devono essere accessibili come **raw** (file pubblico nel repo) altrimenti il portale non li carica. Per repo privati usa "Template Specs" o un blob storage SAS.
 
+## Architettura
+
+```mermaid
+flowchart TB
+    Internet([Internet])
+
+    subgraph HUB["RG hub — VNet 10.10.0.0/16"]
+        PIP[Public IP zone-redundant]
+        AppGw["Application Gateway WAF_v2<br/>snet-appgw 10.10.1.0/24"]
+        PIP --> AppGw
+    end
+
+    subgraph APIM_RG["RG apim — VNet 10.20.0.0/16"]
+        APIM["API Management<br/>public access disabled"]
+        PEapim["Private Endpoint APIM<br/>snet-pe-apim 10.20.2.0/24"]
+        APIM --- PEapim
+    end
+
+    subgraph WL["RG workload — VNet 10.30.0.0/16"]
+        subgraph ACASUB["snet-aca 10.30.4.0/23 (delegata Microsoft.App)"]
+            ACAENV[Container Apps Environment<br/>internal]
+            ACA[Container App chatbot]
+            ACAENV --> ACA
+        end
+        subgraph PESUB["snet-pe 10.30.1.0/24"]
+            FND[AI Foundry]
+            SRCH[AI Search]
+            COS[Cosmos DB]
+            SB[Service Bus]
+            REDIS[Redis Enterprise]
+            KV[Key Vault]
+            ACR[Container Registry]
+        end
+        LAW[Log Analytics]
+        APPINS[Application Insights]
+        DNS[14x Private DNS Zones]
+    end
+
+    Internet --> PIP
+    AppGw -->|HTTPS backend| ACA
+    ACA -.private endpoint.-> FND
+    ACA -.private endpoint.-> COS
+    ACA -.private endpoint.-> REDIS
+    ACA -.private endpoint.-> SB
+    ACA -.private endpoint.-> KV
+    ACA -.private endpoint.-> SRCH
+    ACA -.pull image.-> ACR
+    APIM -.private endpoint.-> FND
+    APPINS --- LAW
+
+    HUB <-->|peering| WL
+    HUB <-->|peering| APIM_RG
+    WL <-->|peering| APIM_RG
+```
+
+> **Edge pubblico**: solo l'Application Gateway. Tutti i servizi PaaS (Foundry, Search, Cosmos, Service Bus, Key Vault, Redis, APIM, ACR) hanno `publicNetworkAccess: Disabled` e sono raggiungibili solo via Private Endpoint.
+
 ## Risorse incluse
 
 | Categoria        | Risorsa                                                                 |
