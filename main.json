@@ -863,7 +863,13 @@
                   {
                     "name": "[variables('acaSubnetName')]",
                     "properties": {
-                      "addressPrefix": "[parameters('subnetAcaPrefix')]"
+                      "addressPrefix": "[parameters('subnetAcaPrefix')]",
+                      "delegations": [
+                        {
+                          "name": "aca-env-delegation",
+                          "properties": { "serviceName": "Microsoft.App/environments" }
+                        }
+                      ]
                     }
                   }
                 ]
