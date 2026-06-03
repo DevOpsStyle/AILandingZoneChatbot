@@ -32,13 +32,28 @@
     },
     "resourceGroupName": {
       "type": "string",
-      "defaultValue": "rg-aifoundry-private",
-      "metadata": { "description": "Nome del Resource Group da creare o usare (vedi useExistingResourceGroup)." }
+      "defaultValue": "",
+      "metadata": { "description": "(deprecato, compat) Se valorizzato sovrascrive resourceGroupWorkloadName. Mantenuto per retro-compatibilità." }
+    },
+    "resourceGroupWorkloadName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Nome del Resource Group workload (KV, Search, Cosmos, SB, Redis, Foundry, ACR, ACA). Vuoto = 'rg-{namePrefix}-workload'." }
+    },
+    "resourceGroupHubName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Nome del Resource Group hub (Hub VNet, Application Gateway WAF). Vuoto = 'rg-{namePrefix}-hub'." }
+    },
+    "resourceGroupApimName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Nome del Resource Group AI Gateway (APIM VNet + APIM service + PE APIM). Vuoto = 'rg-{namePrefix}-apim'." }
     },
     "useExistingResourceGroup": {
       "type": "bool",
       "defaultValue": false,
-      "metadata": { "description": "Se true, NON crea il Resource Group ma usa quello esistente con il nome indicato in resourceGroupName." }
+      "metadata": { "description": "Se true, NON crea i Resource Group ma usa quelli esistenti con i nomi indicati." }
     },
     "namePrefix": {
       "type": "string",
@@ -58,17 +73,45 @@
       "defaultValue": "[utcNow('yyMMdd')]",
       "metadata": { "description": "(interno) Calcolato automaticamente come data odierna; usato solo se nameSalt è vuoto. Non passarlo dal wizard." }
     },
-    "vnetAddressPrefix": {
+    "vnetHubAddressPrefix": {
       "type": "string",
-      "defaultValue": "10.50.0.0/16"
+      "defaultValue": "10.10.0.0/16",
+      "metadata": { "description": "Hub VNet (App Gateway WAF, ingress pubblico)." }
     },
-    "subnetPePrefix": {
+    "subnetAppGwPrefix": {
       "type": "string",
-      "defaultValue": "10.50.1.0/24"
+      "defaultValue": "10.10.1.0/24",
+      "metadata": { "description": "Subnet Application Gateway nel Hub VNet." }
+    },
+    "vnetApimAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.20.0.0/16",
+      "metadata": { "description": "AI Gateway VNet (APIM dedicato)." }
     },
     "subnetApimPrefix": {
       "type": "string",
-      "defaultValue": "10.50.2.0/24"
+      "defaultValue": "10.20.1.0/24",
+      "metadata": { "description": "Subnet APIM nella AI Gateway VNet (delegated subnet per StandardV2/PremiumV2)." }
+    },
+    "subnetApimPePrefix": {
+      "type": "string",
+      "defaultValue": "10.20.2.0/24",
+      "metadata": { "description": "Subnet Private Endpoint APIM nella AI Gateway VNet." }
+    },
+    "vnetWorkloadAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.30.0.0/16",
+      "metadata": { "description": "Workload VNet (data services, ACA, ACR)." }
+    },
+    "subnetPePrefix": {
+      "type": "string",
+      "defaultValue": "10.30.1.0/24",
+      "metadata": { "description": "Subnet Private Endpoints nella Workload VNet (KV, Search, Cosmos, SB, Redis, Foundry, ACR)." }
+    },
+    "subnetAcaPrefix": {
+      "type": "string",
+      "defaultValue": "10.30.4.0/23",
+      "metadata": { "description": "Subnet Container Apps Environment (richiesto minimo /23 per workload profiles)." }
     },
     "models": {
       "type": "array",
@@ -204,8 +247,20 @@
     }
   },
   "variables": {
-    "rgName": "[parameters('resourceGroupName')]",
-    "namePrefix": "[toLower(parameters('namePrefix'))]"
+    "namePrefix": "[toLower(parameters('namePrefix'))]",
+    "rgWorkloadName": "[if(not(empty(parameters('resourceGroupName'))), parameters('resourceGroupName'), if(not(empty(parameters('resourceGroupWorkloadName'))), parameters('resourceGroupWorkloadName'), format('rg-{0}-workload', variables('namePrefix'))))]",
+    "rgHubName":      "[if(not(empty(parameters('resourceGroupHubName'))),      parameters('resourceGroupHubName'),      format('rg-{0}-hub',      variables('namePrefix')))]",
+    "rgApimName":     "[if(not(empty(parameters('resourceGroupApimName'))),     parameters('resourceGroupApimName'),     format('rg-{0}-apim',     variables('namePrefix')))]",
+    "rgName": "[variables('rgWorkloadName')]",
+    "effectiveSalt": "[if(empty(parameters('nameSalt')), parameters('autoSalt'), parameters('nameSalt'))]",
+    "rgWorkloadId": "[format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgWorkloadName'))]",
+    "uniqWorkload": "[uniqueString(variables('rgWorkloadId'), variables('effectiveSalt'))]",
+    "apimNamePrecomputed":    "[format('{0}-apim-{1}',  variables('namePrefix'), variables('uniqWorkload'))]",
+    "foundryNamePrecomputed": "[format('{0}-aif-{1}',   variables('namePrefix'), variables('uniqWorkload'))]",
+    "lawNamePrecomputed":     "[format('{0}-law-{1}',   variables('namePrefix'), variables('uniqWorkload'))]",
+    "vnetWorkloadNamePrecomputed": "[format('{0}-vnet-workload', variables('namePrefix'))]",
+    "vnetHubNamePrecomputed":      "[format('{0}-vnet-hub',      variables('namePrefix'))]",
+    "vnetApimNamePrecomputed":     "[format('{0}-vnet-apim',     variables('namePrefix'))]"
   },
   "resources": [
     {
@@ -240,7 +295,25 @@
       "condition": "[not(parameters('useExistingResourceGroup'))]",
       "type": "Microsoft.Resources/resourceGroups",
       "apiVersion": "2024-03-01",
-      "name": "[variables('rgName')]",
+      "name": "[variables('rgWorkloadName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {}
+    },
+    {
+      "condition": "[not(parameters('useExistingResourceGroup'))]",
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('rgHubName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {}
+    },
+    {
+      "condition": "[and(not(parameters('useExistingResourceGroup')), bool(parameters('enableComponents').apim))]",
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('rgApimName')]",
       "location": "[parameters('location')]",
       "tags": "[parameters('tags')]",
       "properties": {}
@@ -301,10 +374,296 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2024-03-01",
+      "name": "hub-deploy",
+      "resourceGroup": "[variables('rgHubName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/resourceGroups', variables('rgHubName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "location":              { "value": "[parameters('location')]" },
+          "tags":                  { "value": "[parameters('tags')]" },
+          "vnetHubName":           { "value": "[format('{0}-vnet-hub', variables('namePrefix'))]" },
+          "vnetHubAddressPrefix":  { "value": "[parameters('vnetHubAddressPrefix')]" },
+          "subnetAppGwPrefix":     { "value": "[parameters('subnetAppGwPrefix')]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "location":             { "type": "string" },
+            "tags":                 { "type": "object" },
+            "vnetHubName":          { "type": "string" },
+            "vnetHubAddressPrefix": { "type": "string" },
+            "subnetAppGwPrefix":    { "type": "string" }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('vnetHubName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": { "addressPrefixes": [ "[parameters('vnetHubAddressPrefix')]" ] },
+                "subnets": [
+                  {
+                    "name": "snet-appgw",
+                    "properties": {
+                      "addressPrefix": "[parameters('subnetAppGwPrefix')]"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "vnetHubId":   { "type": "string", "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetHubName'))]" },
+            "vnetHubName": { "type": "string", "value": "[parameters('vnetHubName')]" }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[bool(parameters('enableComponents').apim)]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "apim-deploy",
+      "resourceGroup": "[variables('rgApimName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/resourceGroups', variables('rgApimName'))]",
+        "workload-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "location":              { "value": "[parameters('location')]" },
+          "locApim":               { "value": "[if(empty(parameters('locations').apim), parameters('location'), parameters('locations').apim)]" },
+          "tags":                  { "value": "[parameters('tags')]" },
+          "apimName":              { "value": "[variables('apimNamePrecomputed')]" },
+          "apimSku":               { "value": "[parameters('apimSku')]" },
+          "apimPublisherEmail":    { "value": "[parameters('apimPublisherEmail')]" },
+          "apimPublisherName":     { "value": "[parameters('apimPublisherName')]" },
+          "vnetApimName":          { "value": "[variables('vnetApimNamePrecomputed')]" },
+          "vnetApimAddressPrefix": { "value": "[parameters('vnetApimAddressPrefix')]" },
+          "subnetApimPrefix":      { "value": "[parameters('subnetApimPrefix')]" },
+          "subnetApimPePrefix":    { "value": "[parameters('subnetApimPePrefix')]" },
+          "models":                { "value": "[parameters('models')]" },
+          "foundryName":           { "value": "[variables('foundryNamePrecomputed')]" },
+          "foundryEndpoint":       { "value": "[format('https://{0}.cognitiveservices.azure.com/', variables('foundryNamePrecomputed'))]" },
+          "rgWorkloadName":        { "value": "[variables('rgWorkloadName')]" },
+          "lawId":                 { "value": "[resourceId(subscription().subscriptionId, variables('rgWorkloadName'), 'Microsoft.OperationalInsights/workspaces', variables('lawNamePrecomputed'))]" },
+          "diagApim":              { "value": "[and(parameters('enableDiagnostics'), bool(parameters('diagnosticsPerResource').apim))]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "location":              { "type": "string" },
+            "locApim":               { "type": "string" },
+            "tags":                  { "type": "object" },
+            "apimName":              { "type": "string" },
+            "apimSku":               { "type": "string" },
+            "apimPublisherEmail":    { "type": "string" },
+            "apimPublisherName":     { "type": "string" },
+            "vnetApimName":          { "type": "string" },
+            "vnetApimAddressPrefix": { "type": "string" },
+            "subnetApimPrefix":      { "type": "string" },
+            "subnetApimPePrefix":    { "type": "string" },
+            "models":                { "type": "array" },
+            "foundryName":           { "type": "string" },
+            "foundryEndpoint":       { "type": "string" },
+            "rgWorkloadName":        { "type": "string" },
+            "lawId":                 { "type": "string" },
+            "diagApim":              { "type": "bool" }
+          },
+          "variables": {
+            "peSubnetName": "snet-pe-apim",
+            "apimSubnetName": "snet-apim"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('vnetApimName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": { "addressPrefixes": [ "[parameters('vnetApimAddressPrefix')]" ] },
+                "subnets": [
+                  {
+                    "name": "[variables('apimSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('subnetApimPrefix')]"
+                    }
+                  },
+                  {
+                    "name": "[variables('peSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('subnetApimPePrefix')]",
+                      "privateEndpointNetworkPolicies": "Disabled",
+                      "privateLinkServiceNetworkPolicies": "Enabled"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.ApiManagement/service",
+              "apiVersion": "2024-05-01",
+              "name": "[parameters('apimName')]",
+              "location": "[parameters('locApim')]",
+              "tags": "[parameters('tags')]",
+              "sku": { "name": "[parameters('apimSku')]", "capacity": 1 },
+              "identity": { "type": "SystemAssigned" },
+              "properties": {
+                "publisherEmail": "[parameters('apimPublisherEmail')]",
+                "publisherName": "[parameters('apimPublisherName')]",
+                "publicNetworkAccess": "Enabled",
+                "virtualNetworkType": "None"
+              }
+            },
+            {
+              "condition": "[greater(length(parameters('models')), 0)]",
+              "type": "Microsoft.ApiManagement/service/backends",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/aoai-{1}', parameters('apimName'), parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]",
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]"
+              ],
+              "properties": {
+                "title": "[format('Foundry - {0}', parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]",
+                "description": "[format('Backend APIM verso Azure AI Foundry deployment {0} ({1})', parameters('models')[copyIndex('apimBackendLoop')].deploymentName, parameters('models')[copyIndex('apimBackendLoop')].modelName)]",
+                "url": "[format('{0}openai/deployments/{1}', parameters('foundryEndpoint'), parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]",
+                "protocol": "http",
+                "tls": { "validateCertificateChain": true, "validateCertificateName": true }
+              },
+              "copy": {
+                "name": "apimBackendLoop",
+                "count": "[length(parameters('models'))]"
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('pe-{0}', parameters('apimName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetApimName'))]",
+                "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]"
+              ],
+              "properties": {
+                "subnet": { "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetApimName'), variables('peSubnetName'))]" },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "apim",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]",
+                      "groupIds": [ "Gateway" ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('pe-{0}/default', parameters('apimName'))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', parameters('apimName')))]"
+              ],
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  { "name": "apim", "properties": { "privateDnsZoneId": "[resourceId(subscription().subscriptionId, parameters('rgWorkloadName'), 'Microsoft.Network/privateDnsZones', 'privatelink.azure-api.net')]" } }
+                ]
+              }
+            },
+            {
+              "condition": "[parameters('diagApim')]",
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.ApiManagement/service/{0}', parameters('apimName'))]",
+              "name": "diag-apim",
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]"
+              ],
+              "properties": {
+                "workspaceId": "[parameters('lawId')]",
+                "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
+                "metrics": [ { "category": "AllMetrics", "enabled": true } ]
+              }
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2024-03-01",
+              "name": "harden-apim",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', parameters('apimName')), 'default')]"
+              ],
+              "properties": {
+                "mode": "Incremental",
+                "expressionEvaluationOptions": { "scope": "inner" },
+                "parameters": {
+                  "apimName":       { "value": "[parameters('apimName')]" },
+                  "apimSku":        { "value": "[parameters('apimSku')]" },
+                  "locApim":        { "value": "[parameters('locApim')]" },
+                  "tags":           { "value": "[parameters('tags')]" },
+                  "publisherEmail": { "value": "[parameters('apimPublisherEmail')]" },
+                  "publisherName":  { "value": "[parameters('apimPublisherName')]" }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "parameters": {
+                    "apimName":       { "type": "string" },
+                    "apimSku":        { "type": "string" },
+                    "locApim":        { "type": "string" },
+                    "tags":           { "type": "object" },
+                    "publisherEmail": { "type": "string" },
+                    "publisherName":  { "type": "string" }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.ApiManagement/service",
+                      "apiVersion": "2024-05-01",
+                      "name": "[parameters('apimName')]",
+                      "location": "[parameters('locApim')]",
+                      "tags": "[parameters('tags')]",
+                      "sku": { "name": "[parameters('apimSku')]", "capacity": 1 },
+                      "identity": { "type": "SystemAssigned" },
+                      "properties": {
+                        "publisherEmail": "[parameters('publisherEmail')]",
+                        "publisherName": "[parameters('publisherName')]",
+                        "publicNetworkAccess": "Disabled",
+                        "virtualNetworkType": "None"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "vnetApimId":   { "type": "string", "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetApimName'))]" },
+            "vnetApimName": { "type": "string", "value": "[parameters('vnetApimName')]" },
+            "apimName":     { "type": "string", "value": "[parameters('apimName')]" }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
       "name": "workload-deploy",
       "resourceGroup": "[variables('rgName')]",
       "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
+        "[resourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]",
+        "[resourceId('Microsoft.Resources/resourceGroups', variables('rgHubName'))]",
+        "hub-deploy"
       ],
       "properties": {
         "mode": "Incremental",
@@ -315,9 +674,13 @@
           "namePrefix": { "value": "[variables('namePrefix')]" },
           "nameSalt": { "value": "[parameters('nameSalt')]" },
           "autoSalt": { "value": "[parameters('autoSalt')]" },
-          "vnetAddressPrefix": { "value": "[parameters('vnetAddressPrefix')]" },
+          "vnetWorkloadAddressPrefix": { "value": "[parameters('vnetWorkloadAddressPrefix')]" },
           "subnetPePrefix": { "value": "[parameters('subnetPePrefix')]" },
-          "subnetApimPrefix": { "value": "[parameters('subnetApimPrefix')]" },
+          "subnetAcaPrefix": { "value": "[parameters('subnetAcaPrefix')]" },
+          "rgApimName": { "value": "[variables('rgApimName')]" },
+          "vnetApimName": { "value": "[format('{0}-vnet-apim', variables('namePrefix'))]" },
+          "vnetHubName":  { "value": "[format('{0}-vnet-hub', variables('namePrefix'))]" },
+          "rgHubName":  { "value": "[variables('rgHubName')]" },
           "models": { "value": "[parameters('models')]" },
           "apimPublisherEmail": { "value": "[parameters('apimPublisherEmail')]" },
           "apimPublisherName": { "value": "[parameters('apimPublisherName')]" },
@@ -344,9 +707,13 @@
             "namePrefix": { "type": "string" },
             "nameSalt": { "type": "string" },
             "autoSalt": { "type": "string" },
-            "vnetAddressPrefix": { "type": "string" },
+            "vnetWorkloadAddressPrefix": { "type": "string" },
             "subnetPePrefix": { "type": "string" },
-            "subnetApimPrefix": { "type": "string" },
+            "subnetAcaPrefix": { "type": "string" },
+            "rgApimName":  { "type": "string" },
+            "vnetApimName": { "type": "string" },
+            "vnetHubName":  { "type": "string" },
+            "rgHubName":   { "type": "string" },
             "models": { "type": "array" },
             "apimPublisherEmail": { "type": "string" },
             "apimPublisherName": { "type": "string" },
@@ -377,9 +744,9 @@
             "locSb":           "[if(empty(parameters('locations').serviceBus),   parameters('location'), parameters('locations').serviceBus)]",
             "locRedis":        "[if(empty(parameters('locations').redis),        parameters('location'), parameters('locations').redis)]",
             "lawName": "[format('{0}-law-{1}', parameters('namePrefix'), variables('uniq'))]",
-            "vnetName": "[format('{0}-vnet', parameters('namePrefix'))]",
+            "vnetName": "[format('{0}-vnet-workload', parameters('namePrefix'))]",
             "peSubnetName": "snet-pe",
-            "apimSubnetName": "snet-apim",
+            "acaSubnetName": "snet-aca",
             "foundryName": "[format('{0}-aif-{1}', parameters('namePrefix'), variables('uniq'))]",
             "searchName": "[format('{0}-srch-{1}', parameters('namePrefix'), variables('uniq'))]",
             "apimName": "[format('{0}-apim-{1}', parameters('namePrefix'), variables('uniq'))]",
@@ -439,54 +806,13 @@
             },
 
             {
-              "type": "Microsoft.Network/networkSecurityGroups",
-              "apiVersion": "2024-01-01",
-              "name": "[variables('nsgName')]",
-              "location": "[variables('locNetwork')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "securityRules": [
-                  {
-                    "name": "AllowApimManagement",
-                    "properties": {
-                      "priority": 100,
-                      "direction": "Inbound",
-                      "access": "Allow",
-                      "protocol": "Tcp",
-                      "sourcePortRange": "*",
-                      "destinationPortRange": "3443",
-                      "sourceAddressPrefix": "ApiManagement",
-                      "destinationAddressPrefix": "VirtualNetwork"
-                    }
-                  },
-                  {
-                    "name": "AllowAzureLoadBalancer",
-                    "properties": {
-                      "priority": 110,
-                      "direction": "Inbound",
-                      "access": "Allow",
-                      "protocol": "Tcp",
-                      "sourcePortRange": "*",
-                      "destinationPortRange": "6390",
-                      "sourceAddressPrefix": "AzureLoadBalancer",
-                      "destinationAddressPrefix": "VirtualNetwork"
-                    }
-                  }
-                ]
-              }
-            },
-
-            {
               "type": "Microsoft.Network/virtualNetworks",
               "apiVersion": "2024-01-01",
               "name": "[variables('vnetName')]",
               "location": "[variables('locNetwork')]",
               "tags": "[parameters('tags')]",
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
-              ],
               "properties": {
-                "addressSpace": { "addressPrefixes": [ "[parameters('vnetAddressPrefix')]" ] },
+                "addressSpace": { "addressPrefixes": [ "[parameters('vnetWorkloadAddressPrefix')]" ] },
                 "subnets": [
                   {
                     "name": "[variables('peSubnetName')]",
@@ -497,12 +823,9 @@
                     }
                   },
                   {
-                    "name": "[variables('apimSubnetName')]",
+                    "name": "[variables('acaSubnetName')]",
                     "properties": {
-                      "addressPrefix": "[parameters('subnetApimPrefix')]",
-                      "networkSecurityGroup": {
-                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
-                      }
+                      "addressPrefix": "[parameters('subnetAcaPrefix')]"
                     }
                   }
                 ]
@@ -645,46 +968,6 @@
                 "publicNetworkAccess": "disabled",
                 "semanticSearch": "standard",
                 "authOptions": { "aadOrApiKey": { "aadAuthFailureMode": "http401WithBearerChallenge" } }
-              }
-            },
-
-            {
-              "condition": "[variables('enableApim')]",
-              "type": "Microsoft.ApiManagement/service",
-              "apiVersion": "2024-05-01",
-              "name": "[variables('apimName')]",
-              "location": "[variables('locApim')]",
-              "tags": "[parameters('tags')]",
-              "sku": { "name": "[parameters('apimSku')]", "capacity": 1 },
-              "identity": { "type": "SystemAssigned" },
-              "properties": {
-                "publisherEmail": "[parameters('apimPublisherEmail')]",
-                "publisherName": "[parameters('apimPublisherName')]",
-                "publicNetworkAccess": "Enabled",
-                "virtualNetworkType": "None"
-              }
-            },
-
-            {
-              "condition": "[and(variables('enableApim'), greater(length(parameters('models')), 0))]",
-              "type": "Microsoft.ApiManagement/service/backends",
-              "apiVersion": "2024-05-01",
-              "name": "[format('{0}/aoai-{1}', variables('apimName'), parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]",
-              "dependsOn": [
-                "[resourceId('Microsoft.ApiManagement/service', variables('apimName'))]",
-                "[resourceId('Microsoft.CognitiveServices/accounts', variables('foundryName'))]",
-                "[resourceId('Microsoft.Resources/deployments', 'foundry-models-deploy')]"
-              ],
-              "properties": {
-                "title": "[format('Foundry - {0}', parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]",
-                "description": "[format('Backend APIM verso Azure AI Foundry deployment {0} ({1})', parameters('models')[copyIndex('apimBackendLoop')].deploymentName, parameters('models')[copyIndex('apimBackendLoop')].modelName)]",
-                "url": "[format('{0}openai/deployments/{1}', reference(resourceId('Microsoft.CognitiveServices/accounts', variables('foundryName')), '2024-10-01').endpoint, parameters('models')[copyIndex('apimBackendLoop')].deploymentName)]",
-                "protocol": "http",
-                "tls": { "validateCertificateChain": true, "validateCertificateName": true }
-              },
-              "copy": {
-                "name": "apimBackendLoop",
-                "count": "[length(parameters('models'))]"
               }
             },
 
@@ -836,47 +1119,6 @@
               "properties": {
                 "privateDnsZoneConfigs": [
                   { "name": "search", "properties": { "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.search.windows.net')]" } }
-                ]
-              }
-            },
-
-            {
-              "condition": "[variables('enableApim')]",
-              "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2024-01-01",
-              "name": "[format('pe-{0}', variables('apimName'))]",
-              "location": "[variables('locNetwork')]",
-              "tags": "[parameters('tags')]",
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
-                "[resourceId('Microsoft.ApiManagement/service', variables('apimName'))]"
-              ],
-              "properties": {
-                "subnet": { "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('peSubnetName'))]" },
-                "privateLinkServiceConnections": [
-                  {
-                    "name": "apim",
-                    "properties": {
-                      "privateLinkServiceId": "[resourceId('Microsoft.ApiManagement/service', variables('apimName'))]",
-                      "groupIds": [ "Gateway" ]
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "condition": "[variables('enableApim')]",
-              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
-              "apiVersion": "2024-01-01",
-              "name": "[format('pe-{0}/default', variables('apimName'))]",
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}', variables('apimName')))]",
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azure-api.net')]",
-                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', 'privatelink.azure-api.net', format('link-{0}', variables('vnetName')))]"
-              ],
-              "properties": {
-                "privateDnsZoneConfigs": [
-                  { "name": "apim", "properties": { "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azure-api.net')]" } }
                 ]
               }
             },
@@ -1054,12 +1296,11 @@
                 "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]",
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('foundryName')), 'default')]",
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('searchName')), 'default')]",
-                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('apimName')), 'default')]",
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('cosmosName')), 'default')]",
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('sbName')), 'default')]",
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('redisName')), 'default')]",
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('kvName')), 'default')]",
-                "[resourceId('Microsoft.Resources/deployments', 'foundry-models-deploy')]"
+                "foundry-models-deploy"
               ],
               "properties": {
                 "mode": "Incremental",
@@ -1068,14 +1309,12 @@
                   "lawId":       { "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]" },
                   "foundryName": { "value": "[variables('foundryName')]" },
                   "searchName":  { "value": "[variables('searchName')]" },
-                  "apimName":    { "value": "[variables('apimName')]" },
                   "cosmosName":  { "value": "[variables('cosmosName')]" },
                   "sbName":      { "value": "[variables('sbName')]" },
                   "redisName":   { "value": "[variables('redisName')]" },
                   "kvName":      { "value": "[variables('kvName')]" },
                   "diagFoundry": { "value": "[variables('diagFoundry')]" },
                   "diagSearch":  { "value": "[variables('diagSearch')]" },
-                  "diagApim":    { "value": "[variables('diagApim')]" },
                   "diagCosmos":  { "value": "[variables('diagCosmos')]" },
                   "diagSb":      { "value": "[variables('diagSb')]" },
                   "diagRedis":   { "value": "[variables('diagRedis')]" },
@@ -1088,14 +1327,12 @@
                     "lawId":       { "type": "string" },
                     "foundryName": { "type": "string" },
                     "searchName":  { "type": "string" },
-                    "apimName":    { "type": "string" },
                     "cosmosName":  { "type": "string" },
                     "sbName":      { "type": "string" },
                     "redisName":   { "type": "string" },
                     "kvName":      { "type": "string" },
                     "diagFoundry": { "type": "bool" },
                     "diagSearch":  { "type": "bool" },
-                    "diagApim":    { "type": "bool" },
                     "diagCosmos":  { "type": "bool" },
                     "diagSb":      { "type": "bool" },
                     "diagRedis":   { "type": "bool" },
@@ -1120,18 +1357,6 @@
                       "apiVersion": "2021-05-01-preview",
                       "scope": "[format('Microsoft.Search/searchServices/{0}', parameters('searchName'))]",
                       "name": "diag-search",
-                      "properties": {
-                        "workspaceId": "[parameters('lawId')]",
-                        "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
-                        "metrics": [ { "category": "AllMetrics", "enabled": true } ]
-                      }
-                    },
-                    {
-                      "condition": "[parameters('diagApim')]",
-                      "type": "Microsoft.Insights/diagnosticSettings",
-                      "apiVersion": "2021-05-01-preview",
-                      "scope": "[format('Microsoft.ApiManagement/service/{0}', parameters('apimName'))]",
-                      "name": "diag-apim",
                       "properties": {
                         "workspaceId": "[parameters('lawId')]",
                         "logs": [ { "categoryGroup": "allLogs", "enabled": true } ],
@@ -1195,37 +1420,24 @@
               "name": "harden-private-access",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('foundryName')), 'default')]",
-                "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', format('pe-{0}', variables('apimName')), 'default')]",
-                "[resourceId('Microsoft.Resources/deployments', 'foundry-models-deploy')]",
-                "[resourceId('Microsoft.Resources/deployments', 'diagnostics-apply')]"
+                "foundry-models-deploy",
+                "diagnostics-apply"
               ],
               "properties": {
                 "mode": "Incremental",
                 "expressionEvaluationOptions": { "scope": "inner" },
                 "parameters": {
                   "foundryName":   { "value": "[variables('foundryName')]" },
-                  "apimName":      { "value": "[variables('apimName')]" },
-                  "apimSku":       { "value": "[parameters('apimSku')]" },
-                  "enableApim":    { "value": "[variables('enableApim')]" },
                   "locFoundry":    { "value": "[variables('locFoundry')]" },
-                  "locApim":       { "value": "[variables('locApim')]" },
-                  "tags":          { "value": "[parameters('tags')]" },
-                  "publisherEmail":{ "value": "[parameters('apimPublisherEmail')]" },
-                  "publisherName": { "value": "[parameters('apimPublisherName')]" }
+                  "tags":          { "value": "[parameters('tags')]" }
                 },
                 "template": {
                   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
                   "contentVersion": "1.0.0.0",
                   "parameters": {
                     "foundryName":    { "type": "string" },
-                    "apimName":       { "type": "string" },
-                    "apimSku":        { "type": "string" },
-                    "enableApim":     { "type": "bool" },
                     "locFoundry":     { "type": "string" },
-                    "locApim":        { "type": "string" },
-                    "tags":           { "type": "object" },
-                    "publisherEmail": { "type": "string" },
-                    "publisherName":  { "type": "string" }
+                    "tags":           { "type": "object" }
                   },
                   "resources": [
                     {
@@ -1243,22 +1455,6 @@
                         "disableLocalAuth": false,
                         "networkAcls": { "defaultAction": "Deny", "virtualNetworkRules": [], "ipRules": [] }
                       }
-                    },
-                    {
-                      "condition": "[parameters('enableApim')]",
-                      "type": "Microsoft.ApiManagement/service",
-                      "apiVersion": "2024-05-01",
-                      "name": "[parameters('apimName')]",
-                      "location": "[parameters('locApim')]",
-                      "tags": "[parameters('tags')]",
-                      "sku": { "name": "[parameters('apimSku')]", "capacity": 1 },
-                      "identity": { "type": "SystemAssigned" },
-                      "properties": {
-                        "publisherEmail": "[parameters('publisherEmail')]",
-                        "publisherName": "[parameters('publisherName')]",
-                        "publicNetworkAccess": "Disabled",
-                        "virtualNetworkType": "None"
-                      }
                     }
                   ]
                 }
@@ -1268,6 +1464,8 @@
           "outputs": {
             "logAnalyticsWorkspaceId": { "type": "string", "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawName'))]" },
             "vnetId": { "type": "string", "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]" },
+            "vnetName": { "type": "string", "value": "[variables('vnetName')]" },
+            "foundryName": { "type": "string", "value": "[variables('foundryName')]" },
             "foundryEndpoint": { "type": "string", "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('foundryName')), '2024-10-01').endpoint]" },
             "searchName": { "type": "string", "value": "[variables('searchName')]" },
             "apimName": { "type": "string", "value": "[variables('apimName')]" },
@@ -1279,11 +1477,349 @@
           }
         }
       }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "peering-hub-to-workload",
+      "resourceGroup": "[variables('rgHubName')]",
+      "dependsOn": [
+        "hub-deploy",
+        "workload-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "vnetLocalName":  { "value": "[format('{0}-vnet-hub', variables('namePrefix'))]" },
+          "peeringName":    { "value": "to-workload" },
+          "remoteVnetId":   { "value": "[resourceId(subscription().subscriptionId, variables('rgWorkloadName'), 'Microsoft.Network/virtualNetworks', format('{0}-vnet-workload', variables('namePrefix')))]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "vnetLocalName": { "type": "string" },
+            "peeringName":   { "type": "string" },
+            "remoteVnetId":  { "type": "string" }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('vnetLocalName'), parameters('peeringName'))]",
+              "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": { "id": "[parameters('remoteVnetId')]" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "peering-workload-to-hub",
+      "resourceGroup": "[variables('rgWorkloadName')]",
+      "dependsOn": [
+        "hub-deploy",
+        "workload-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "vnetLocalName":  { "value": "[format('{0}-vnet-workload', variables('namePrefix'))]" },
+          "peeringName":    { "value": "to-hub" },
+          "remoteVnetId":   { "value": "[resourceId(subscription().subscriptionId, variables('rgHubName'), 'Microsoft.Network/virtualNetworks', format('{0}-vnet-hub', variables('namePrefix')))]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "vnetLocalName": { "type": "string" },
+            "peeringName":   { "type": "string" },
+            "remoteVnetId":  { "type": "string" }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('vnetLocalName'), parameters('peeringName'))]",
+              "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": { "id": "[parameters('remoteVnetId')]" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[bool(parameters('enableComponents').apim)]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "peering-hub-to-apim",
+      "resourceGroup": "[variables('rgHubName')]",
+      "dependsOn": [
+        "hub-deploy",
+        "apim-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "vnetLocalName":  { "value": "[format('{0}-vnet-hub', variables('namePrefix'))]" },
+          "peeringName":    { "value": "to-apim" },
+          "remoteVnetId":   { "value": "[resourceId(subscription().subscriptionId, variables('rgApimName'), 'Microsoft.Network/virtualNetworks', format('{0}-vnet-apim', variables('namePrefix')))]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "vnetLocalName": { "type": "string" },
+            "peeringName":   { "type": "string" },
+            "remoteVnetId":  { "type": "string" }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('vnetLocalName'), parameters('peeringName'))]",
+              "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": { "id": "[parameters('remoteVnetId')]" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[bool(parameters('enableComponents').apim)]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "peering-apim-to-hub",
+      "resourceGroup": "[variables('rgApimName')]",
+      "dependsOn": [
+        "hub-deploy",
+        "apim-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "vnetLocalName":  { "value": "[format('{0}-vnet-apim', variables('namePrefix'))]" },
+          "peeringName":    { "value": "to-hub" },
+          "remoteVnetId":   { "value": "[resourceId(subscription().subscriptionId, variables('rgHubName'), 'Microsoft.Network/virtualNetworks', format('{0}-vnet-hub', variables('namePrefix')))]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "vnetLocalName": { "type": "string" },
+            "peeringName":   { "type": "string" },
+            "remoteVnetId":  { "type": "string" }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('vnetLocalName'), parameters('peeringName'))]",
+              "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": { "id": "[parameters('remoteVnetId')]" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[bool(parameters('enableComponents').apim)]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "peering-apim-to-workload",
+      "resourceGroup": "[variables('rgApimName')]",
+      "dependsOn": [
+        "apim-deploy",
+        "workload-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "vnetLocalName":  { "value": "[format('{0}-vnet-apim', variables('namePrefix'))]" },
+          "peeringName":    { "value": "to-workload" },
+          "remoteVnetId":   { "value": "[resourceId(subscription().subscriptionId, variables('rgWorkloadName'), 'Microsoft.Network/virtualNetworks', format('{0}-vnet-workload', variables('namePrefix')))]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "vnetLocalName": { "type": "string" },
+            "peeringName":   { "type": "string" },
+            "remoteVnetId":  { "type": "string" }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('vnetLocalName'), parameters('peeringName'))]",
+              "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": { "id": "[parameters('remoteVnetId')]" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[bool(parameters('enableComponents').apim)]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "peering-workload-to-apim",
+      "resourceGroup": "[variables('rgWorkloadName')]",
+      "dependsOn": [
+        "apim-deploy",
+        "workload-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "vnetLocalName":  { "value": "[format('{0}-vnet-workload', variables('namePrefix'))]" },
+          "peeringName":    { "value": "to-apim" },
+          "remoteVnetId":   { "value": "[resourceId(subscription().subscriptionId, variables('rgApimName'), 'Microsoft.Network/virtualNetworks', format('{0}-vnet-apim', variables('namePrefix')))]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "vnetLocalName": { "type": "string" },
+            "peeringName":   { "type": "string" },
+            "remoteVnetId":  { "type": "string" }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('vnetLocalName'), parameters('peeringName'))]",
+              "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": { "id": "[parameters('remoteVnetId')]" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2024-03-01",
+      "name": "dns-spoke-links-deploy",
+      "resourceGroup": "[variables('rgWorkloadName')]",
+      "dependsOn": [
+        "hub-deploy",
+        "workload-deploy"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": { "scope": "inner" },
+        "parameters": {
+          "vnetHubId":    { "value": "[resourceId(subscription().subscriptionId, variables('rgHubName'), 'Microsoft.Network/virtualNetworks', format('{0}-vnet-hub', variables('namePrefix')))]" },
+          "vnetHubName":  { "value": "[format('{0}-vnet-hub', variables('namePrefix'))]" },
+          "vnetApimId":   { "value": "[if(bool(parameters('enableComponents').apim), resourceId(subscription().subscriptionId, variables('rgApimName'), 'Microsoft.Network/virtualNetworks', format('{0}-vnet-apim', variables('namePrefix'))), '')]" },
+          "vnetApimName": { "value": "[format('{0}-vnet-apim', variables('namePrefix'))]" },
+          "enableApim":   { "value": "[bool(parameters('enableComponents').apim)]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "vnetHubId":    { "type": "string" },
+            "vnetHubName":  { "type": "string" },
+            "vnetApimId":   { "type": "string" },
+            "vnetApimName": { "type": "string" },
+            "enableApim":   { "type": "bool" }
+          },
+          "variables": {
+            "dnsZones": [
+              "privatelink.cognitiveservices.azure.com",
+              "privatelink.openai.azure.com",
+              "privatelink.services.ai.azure.com",
+              "privatelink.search.windows.net",
+              "privatelink.azure-api.net",
+              "privatelink.documents.azure.com",
+              "privatelink.mongo.cosmos.azure.com",
+              "privatelink.cassandra.cosmos.azure.com",
+              "privatelink.gremlin.cosmos.azure.com",
+              "privatelink.table.cosmos.azure.com",
+              "privatelink.servicebus.windows.net",
+              "privatelink.redis.azure.net",
+              "privatelink.vaultcore.azure.net"
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2024-06-01",
+              "name": "[format('{0}/link-{1}', variables('dnsZones')[copyIndex('dnsLinkHubLoop')], parameters('vnetHubName'))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": { "id": "[parameters('vnetHubId')]" }
+              },
+              "copy": {
+                "name": "dnsLinkHubLoop",
+                "count": "[length(variables('dnsZones'))]"
+              }
+            },
+            {
+              "condition": "[parameters('enableApim')]",
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2024-06-01",
+              "name": "[format('{0}/link-{1}', variables('dnsZones')[copyIndex('dnsLinkApimLoop')], parameters('vnetApimName'))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": { "id": "[parameters('vnetApimId')]" }
+              },
+              "copy": {
+                "name": "dnsLinkApimLoop",
+                "count": "[length(variables('dnsZones'))]"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "outputs": {
     "deployedSubscriptionId": { "type": "string", "value": "[subscription().subscriptionId]" },
-    "resourceGroup": { "type": "string", "value": "[variables('rgName')]" },
+    "resourceGroupWorkload": { "type": "string", "value": "[variables('rgWorkloadName')]" },
+    "resourceGroupHub":      { "type": "string", "value": "[variables('rgHubName')]" },
+    "resourceGroupApim":     { "type": "string", "value": "[variables('rgApimName')]" },
     "resourceGroupCreated": { "type": "bool", "value": "[not(parameters('useExistingResourceGroup'))]" },
     "workloadOutputs": { "type": "object", "value": "[reference('workload-deploy').outputs]" }
   }

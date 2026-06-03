@@ -87,12 +87,46 @@
       {
         "name": "resourceGroupName",
         "type": "Microsoft.Common.TextBox",
-        "label": "Nome Resource Group",
-        "defaultValue": "rg-aifoundry-private",
+        "label": "Nome Resource Group Workload (AI services)",
+        "defaultValue": "",
+        "toolTip": "Lascia vuoto per usare il default `rg-<namePrefix>-workload`. Questo RG contiene AI Foundry, AI Search, Cosmos, Service Bus, Redis, Key Vault, Container Apps, ACR, App Insights e la VNet Workload (spoke).",
         "constraints": {
-          "required": true,
-          "regex": "^[a-zA-Z0-9._()-]{1,90}$",
+          "required": false,
+          "regex": "^$|^[a-zA-Z0-9._()-]{1,90}$",
           "validationMessage": "Nome RG non valido."
+        }
+      },
+      {
+        "name": "resourceGroupHubName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Nome Resource Group Hub (network edge)",
+        "defaultValue": "",
+        "toolTip": "Lascia vuoto per usare il default `rg-<namePrefix>-hub`. Questo RG contiene la VNet Hub con Application Gateway WAF, IP pubblico e (eventualmente) Azure Firewall.",
+        "constraints": {
+          "required": false,
+          "regex": "^$|^[a-zA-Z0-9._()-]{1,90}$",
+          "validationMessage": "Nome RG non valido."
+        }
+      },
+      {
+        "name": "resourceGroupApimName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Nome Resource Group APIM (API Management)",
+        "defaultValue": "",
+        "toolTip": "Lascia vuoto per usare il default `rg-<namePrefix>-apim`. Questo RG contiene API Management (SaaS) e la VNet APIM (spoke) con il Private Endpoint di APIM. Creato solo se APIM è abilitato.",
+        "constraints": {
+          "required": false,
+          "regex": "^$|^[a-zA-Z0-9._()-]{1,90}$",
+          "validationMessage": "Nome RG non valido."
+        }
+      },
+      {
+        "name": "rgInfo",
+        "type": "Microsoft.Common.InfoBox",
+        "visible": true,
+        "options": {
+          "icon": "Info",
+          "text": "La landing zone usa **tre Resource Group** (hub-spoke): Hub (network edge), Workload (AI services + spoke VNet) e APIM (API Management + spoke VNet). Le tre VNet sono collegate da peering bidirezionali e tutte le Private DNS Zones sono centralizzate nel RG Workload con virtualNetworkLinks alle tre VNet."
         }
       },
       {
@@ -164,11 +198,26 @@
       },
       {
         "name": "network",
-        "label": "Networking",
+        "label": "Networking (hub-spoke)",
         "elements": [
-          { "name": "vnetAddressPrefix", "type": "Microsoft.Common.TextBox", "label": "VNet address space (CIDR)", "defaultValue": "10.50.0.0/16", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } },
-          { "name": "subnetPePrefix",    "type": "Microsoft.Common.TextBox", "label": "Subnet Private Endpoints (CIDR)", "defaultValue": "10.50.1.0/24", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } },
-          { "name": "subnetApimPrefix",  "type": "Microsoft.Common.TextBox", "label": "Subnet APIM (CIDR)", "defaultValue": "10.50.2.0/24", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } }
+          { "name": "info", "type": "Microsoft.Common.InfoBox", "visible": true, "options": { "icon": "Info", "text": "Tre VNet (hub + 2 spoke) collegate da peering bidirezionali. **Hub**: Application Gateway WAF (e futura egress). **Workload**: Private Endpoints + Container Apps. **APIM**: APIM SaaS + suo Private Endpoint. Default `10.10/16` (hub), `10.20/16` (apim), `10.30/16` (workload)." } },
+
+          { "name": "hubHeader", "type": "Microsoft.Common.Section", "label": "Hub VNet (network edge)", "elements": [
+            { "name": "vnetHubAddressPrefix", "type": "Microsoft.Common.TextBox", "label": "Hub VNet CIDR", "defaultValue": "10.10.0.0/16", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } },
+            { "name": "subnetAppGwPrefix",    "type": "Microsoft.Common.TextBox", "label": "Subnet Application Gateway",  "defaultValue": "10.10.1.0/24", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } }
+          ] },
+
+          { "name": "apimHeader", "type": "Microsoft.Common.Section", "label": "APIM VNet (spoke)", "elements": [
+            { "name": "vnetApimAddressPrefix", "type": "Microsoft.Common.TextBox", "label": "APIM VNet CIDR",            "defaultValue": "10.20.0.0/16", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } },
+            { "name": "subnetApimPrefix",      "type": "Microsoft.Common.TextBox", "label": "Subnet APIM (reserved)",     "defaultValue": "10.20.1.0/24", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } },
+            { "name": "subnetApimPePrefix",    "type": "Microsoft.Common.TextBox", "label": "Subnet APIM Private Endpoint","defaultValue": "10.20.2.0/24", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } }
+          ] },
+
+          { "name": "wlHeader", "type": "Microsoft.Common.Section", "label": "Workload VNet (spoke)", "elements": [
+            { "name": "vnetWorkloadAddressPrefix", "type": "Microsoft.Common.TextBox", "label": "Workload VNet CIDR",     "defaultValue": "10.30.0.0/16", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } },
+            { "name": "subnetPePrefix",            "type": "Microsoft.Common.TextBox", "label": "Subnet Private Endpoints","defaultValue": "10.30.1.0/24", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } },
+            { "name": "subnetAcaPrefix",           "type": "Microsoft.Common.TextBox", "label": "Subnet Container Apps Env","defaultValue": "10.30.4.0/23", "toolTip": "Container Apps Environment richiede una subnet dedicata /23 (workload-profile) o /27 (consumption).", "constraints": { "required": true, "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", "validationMessage": "CIDR non valido." } }
+          ] }
         ]
       },
       {
@@ -286,12 +335,20 @@
       "targetSubscriptionId":     "[subscription().subscriptionId]",
       "location":                 "[location()]",
       "resourceGroupName":        "[basics('resourceGroupName')]",
+      "resourceGroupWorkloadName":"[basics('resourceGroupName')]",
+      "resourceGroupHubName":     "[basics('resourceGroupHubName')]",
+      "resourceGroupApimName":    "[basics('resourceGroupApimName')]",
       "useExistingResourceGroup": "[equals(basics('useExistingResourceGroup'), 'true')]",
       "namePrefix":               "[basics('namePrefix')]",
       "nameSalt":                 "[basics('nameSalt')]",
-      "vnetAddressPrefix":        "[steps('network').vnetAddressPrefix]",
-      "subnetPePrefix":           "[steps('network').subnetPePrefix]",
-      "subnetApimPrefix":         "[steps('network').subnetApimPrefix]",
+      "vnetHubAddressPrefix":     "[steps('network').hubHeader.vnetHubAddressPrefix]",
+      "subnetAppGwPrefix":        "[steps('network').hubHeader.subnetAppGwPrefix]",
+      "vnetApimAddressPrefix":    "[steps('network').apimHeader.vnetApimAddressPrefix]",
+      "subnetApimPrefix":         "[steps('network').apimHeader.subnetApimPrefix]",
+      "subnetApimPePrefix":       "[steps('network').apimHeader.subnetApimPePrefix]",
+      "vnetWorkloadAddressPrefix":"[steps('network').wlHeader.vnetWorkloadAddressPrefix]",
+      "subnetPePrefix":           "[steps('network').wlHeader.subnetPePrefix]",
+      "subnetAcaPrefix":          "[steps('network').wlHeader.subnetAcaPrefix]",
       "modelCount":               "[int(steps('ai').modelCount)]",
       "models": "[take(parse(concat('[{\"deploymentName\":\"', steps('ai').model1Section.deploymentName, '\",\"modelName\":\"', steps('ai').model1Section.modelName, '\",\"format\":\"', steps('ai').model1Section.format, '\",\"version\":\"', steps('ai').model1Section.version, '\",\"skuName\":\"', steps('ai').model1Section.skuName, '\",\"capacity\":', string(int(steps('ai').model1Section.capacity)), '},{\"deploymentName\":\"', steps('ai').model2Section.deploymentName, '\",\"modelName\":\"', steps('ai').model2Section.modelName, '\",\"format\":\"', steps('ai').model2Section.format, '\",\"version\":\"', steps('ai').model2Section.version, '\",\"skuName\":\"', steps('ai').model2Section.skuName, '\",\"capacity\":', string(int(steps('ai').model2Section.capacity)), '},{\"deploymentName\":\"', steps('ai').model3Section.deploymentName, '\",\"modelName\":\"', steps('ai').model3Section.modelName, '\",\"format\":\"', steps('ai').model3Section.format, '\",\"version\":\"', steps('ai').model3Section.version, '\",\"skuName\":\"', steps('ai').model3Section.skuName, '\",\"capacity\":', string(int(steps('ai').model3Section.capacity)), '}]')), int(steps('ai').modelCount))]",
       "apimPublisherEmail":       "[steps('apim').apimPublisherEmail]",
